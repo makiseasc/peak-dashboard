@@ -158,7 +158,7 @@ export function QuickActionsPanel() {
               <div key={hla.id} className="flex items-center gap-3">
                 <Checkbox
                   checked={hla.completed}
-                  onCheckedChange={(checked) => {
+                  onCheckedChange={(checked: boolean | 'indeterminate') => {
                     const updatedHLAs = data.currentHLAs.map((h) =>
                       h.id === hla.id ? { ...h, completed: !!checked } : h
                     );
