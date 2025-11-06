@@ -5,7 +5,7 @@ import { CheckCircle2, Zap, Coins } from "lucide-react";
 import { useDashboard } from "@/contexts/DashboardContext";
 import { useState, useEffect } from "react";
 import { LevelUpCelebration } from "./LevelUpCelebration";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "@/components/ui/use-toast";
 
 export function HLATracker() {
   const { data, updateData, awardXP, awardGP, updateStreak } = useDashboard();

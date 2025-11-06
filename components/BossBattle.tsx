@@ -6,7 +6,7 @@ import { Skull, Swords, Trophy, CheckCircle2, Coins } from "lucide-react";
 import { Badge } from "./ui/badge";
 import { useState } from "react";
 import { LevelUpCelebration } from "./LevelUpCelebration";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "@/components/ui/use-toast";
 import { Checkbox } from "./ui/checkbox";
 
 export function BossBattle() {

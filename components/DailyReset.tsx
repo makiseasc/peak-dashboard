@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import { Badge } from "./ui/badge";
 import { Checkbox } from "./ui/checkbox";
 import { LevelUpCelebration } from "./LevelUpCelebration";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "@/components/ui/use-toast";
 
 export function DailyReset() {
   const { data, updateData, awardXP, awardGP, updateStreak } = useDashboard();
