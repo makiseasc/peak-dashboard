@@ -245,6 +245,9 @@ const initialData: DashboardData = {
 
 export function DashboardProvider({ children }: { children: ReactNode }) {
   const [data, setData] = useState<DashboardData>(() => {
+    if (typeof window === "undefined") {
+      return initialData;
+    }
     const stored = localStorage.getItem("dashboardData");
     if (stored) {
       const parsed = JSON.parse(stored);
@@ -285,6 +288,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
 
   // Daily reset logic
   useEffect(() => {
+    if (typeof window === "undefined") return;
     const checkDailyReset = () => {
       const today = new Date().toISOString().split("T")[0];
       const lastResetDate = localStorage.getItem("lastResetDate");
@@ -318,6 +322,7 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     // Debounced localStorage save
+    if (typeof window === "undefined") return;
     const timeout = setTimeout(() => {
       localStorage.setItem("dashboardData", JSON.stringify(data));
     }, 500);
