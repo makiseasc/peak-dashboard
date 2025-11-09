@@ -1,0 +1,75 @@
+{
+  "name": "Gumroad Sale Sync",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "gumroad-sale",
+      "httpMethod": "POST",
+      "responseMode": "responseNode"
+      },
+      "id": "webhook-node",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "gumroad-sale"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.VERCEL_URL || 'https://ops.makiseasc.com' }}/api/gumroad",
+        "sendBody": true,
+        "contentType": "json",
+        "bodyParametersJson": "={\"product_name\":\"{{ $json.product_name }}\",\"price\":{{ $json.price }},\"created_at\":\"{{ $json.created_at }}\",\"sale_id\":\"{{ $json.sale_id }}\"}"
+      },
+      "id": "http-request-node",
+      "name": "Forward to Dashboard",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"success\":true,\"message\":\"Sale synced to dashboard\"}"
+      },
+      "id": "respond-node",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.VERCEL_URL || 'https://ops.makiseasc.com' }}/api/monitor",
+        "sendBody": true,
+        "contentType": "json",
+        "bodyParametersJson": "={\"name\":\"Gumroad Sync\",\"status\":\"success\",\"details\":\"Sale {{ $json.sale_id }} synced\"}"
+      },
+      "id": "monitor-node",
+      "name": "Log to Monitor",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [650, 450]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [[{ "node": "Forward to Dashboard", "type": "main", "index": 0 }]]
+    },
+    "Forward to Dashboard": {
+      "main": [[{ "node": "Respond to Webhook", "type": "main", "index": 0 }, { "node": "Log to Monitor", "type": "main", "index": 0 }]]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2024-01-20T00:00:00.000Z",
+  "versionId": "1"
+}
+

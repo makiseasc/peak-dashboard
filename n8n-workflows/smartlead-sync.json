@@ -1,0 +1,114 @@
+{
+  "name": "Smartlead Daily Sync",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * *"
+            }
+          ]
+        }
+      },
+      "id": "cron-node",
+      "name": "Cron (8 AM Daily)",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.VERCEL_URL || 'https://ops.makiseasc.com' }}/api/integrations/smartlead",
+        "options": {}
+      },
+      "id": "http-request-node",
+      "name": "Trigger Smartlead Sync",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "condition-1",
+              "leftValue": "={{ $json.success }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-node",
+      "name": "Check Success",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.VERCEL_URL || 'https://ops.makiseasc.com' }}/api/monitor",
+        "sendBody": true,
+        "contentType": "json",
+        "bodyParametersJson": "={\"name\":\"Smartlead Sync\",\"status\":\"success\",\"details\":\"{{ $json.synced }} campaigns synced\"}"
+      },
+      "id": "success-monitor",
+      "name": "Log Success",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [850, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.VERCEL_URL || 'https://ops.makiseasc.com' }}/api/monitor",
+        "sendBody": true,
+        "contentType": "json",
+        "bodyParametersJson": "={\"name\":\"Smartlead Sync\",\"status\":\"fail\",\"details\":\"{{ $json.error }}\"}"
+      },
+      "id": "error-monitor",
+      "name": "Log Failure",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [850, 400]
+    }
+  ],
+  "connections": {
+    "Cron (8 AM Daily)": {
+      "main": [[{ "node": "Trigger Smartlead Sync", "type": "main", "index": 0 }]]
+    },
+    "Trigger Smartlead Sync": {
+      "main": [[{ "node": "Check Success", "type": "main", "index": 0 }]]
+    },
+    "Check Success": {
+      "main": [
+        [{ "node": "Log Success", "type": "main", "index": 0 }],
+        [{ "node": "Log Failure", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2024-01-20T00:00:00.000Z",
+  "versionId": "1"
+}

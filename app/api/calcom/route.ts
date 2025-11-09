@@ -24,15 +24,26 @@ export async function POST(req: NextRequest) {
     // Extract client name (could be name, email, or eventType)
     const clientName = name || email || eventType?.title || 'Cal.com Booking';
 
+    // Estimate deal value based on event type
+    let dealValue = 0;
+    const eventTitle = eventType?.title || '';
+    if (eventTitle.toLowerCase().includes('consulting')) {
+      dealValue = 250; // Default consulting call value
+    } else if (eventTitle.toLowerCase().includes('discovery')) {
+      dealValue = 0; // Discovery calls have no value yet
+    } else if (eventTitle.toLowerCase().includes('proposal') || eventTitle.toLowerCase().includes('follow-up')) {
+      dealValue = 500; // Higher value for follow-ups
+    }
+
     // Insert into pipeline table
     const { data, error } = await supabase
       .from('pipeline')
       .insert({
         stage: 'discovery',
         client_name: clientName,
-        deal_value: 0,
+        deal_value: dealValue,
         date: date,
-        notes: `Auto-added from Cal.com${bookingId ? ` (Booking ID: ${bookingId})` : ''}${email ? ` - ${email}` : ''}`,
+        notes: `Auto-added from Cal.com${bookingId ? ` (Booking ID: ${bookingId})` : ''}${email ? ` - ${email}` : ''}${eventTitle ? ` - ${eventTitle}` : ''}`,
       })
       .select()
       .single();

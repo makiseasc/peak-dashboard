@@ -1,0 +1,109 @@
+{
+  "name": "AI Daily Brief Sender",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 9 * * *"
+            }
+          ]
+        }
+      },
+      "id": "cron-node",
+      "name": "Cron (9 AM Daily)",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.VERCEL_URL || 'https://ops.makiseasc.com' }}/api/report",
+        "options": {}
+      },
+      "id": "http-request-node",
+      "name": "Generate Report",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "assignment-1",
+              "name": "subject",
+              "value": "=⚙️ Daily Empire Brief - {{ $now.format('MMM DD, YYYY') }}",
+              "type": "string"
+            },
+            {
+              "id": "assignment-2",
+              "name": "body",
+              "value": "={{ $json.report }}\n\n---\n\nMetrics:\n- Revenue (30d): ${{ $json.metrics.totalRevenue }}\n- Daily Avg: ${{ $json.metrics.avgDaily }}\n- Active Pipeline: {{ $json.metrics.activePipeline }}\n- HLAs: {{ $json.metrics.completedHLA }}/{{ $json.metrics.totalHLA }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "format-node",
+      "name": "Format Email",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "fromEmail": "={{ $env.EMAIL_FROM || 'ops@makiseasc.com' }}",
+        "toEmail": "={{ $env.EMAIL_TO || 'marcus@makiseasc.com' }}",
+        "subject": "={{ $json.subject }}",
+        "text": "={{ $json.body }}",
+        "options": {}
+      },
+      "id": "email-node",
+      "name": "Email Report",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.VERCEL_URL || 'https://ops.makiseasc.com' }}/api/monitor",
+        "sendBody": true,
+        "contentType": "json",
+        "bodyParametersJson": "={\"name\":\"Daily Brief\",\"status\":\"success\",\"details\":\"Report sent to {{ $env.EMAIL_TO }}\"}"
+      },
+      "id": "monitor-node",
+      "name": "Log to Monitor",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [850, 450]
+    }
+  ],
+  "connections": {
+    "Cron (9 AM Daily)": {
+      "main": [[{ "node": "Generate Report", "type": "main", "index": 0 }]]
+    },
+    "Generate Report": {
+      "main": [[{ "node": "Format Email", "type": "main", "index": 0 }]]
+    },
+    "Format Email": {
+      "main": [[{ "node": "Email Report", "type": "main", "index": 0 }, { "node": "Log to Monitor", "type": "main", "index": 0 }]]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2024-01-20T00:00:00.000Z",
+  "versionId": "1"
+}
+

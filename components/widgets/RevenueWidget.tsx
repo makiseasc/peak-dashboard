@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, DollarSign, TrendingUp, Calendar } from "lucide-react";
+import { Plus, DollarSign, TrendingUp, Calendar, Copy, Loader2 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { QuickAddModal } from "./QuickAddModal";
@@ -32,6 +32,9 @@ async function fetchRevenue(days: number = 30): Promise<RevenueData> {
 export function RevenueWidget() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [days, setDays] = useState(30);
+  const [proofPost, setProofPost] = useState("");
+  const [showProof, setShowProof] = useState(false);
+  const [generatingProof, setGeneratingProof] = useState(false);
   const queryClient = useQueryClient();
 
   const { data, isLoading, error } = useQuery<RevenueData>({
@@ -64,6 +67,35 @@ export function RevenueWidget() {
       toast.error(error.message || "Failed to add revenue");
     },
   });
+
+  const generateProof = async (type: 'twitter' | 'linkedin') => {
+    setGeneratingProof(true);
+    try {
+      const res = await fetch('/api/proof', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type }),
+      });
+      if (!res.ok) throw new Error("Failed to generate proof post");
+      const data = await res.json();
+      setProofPost(data.content);
+      setShowProof(true);
+      toast.success(`${type === 'twitter' ? 'Twitter' : 'LinkedIn'} post generated! 🎯`);
+    } catch (error: any) {
+      toast.error(error.message || "Failed to generate proof post");
+    } finally {
+      setGeneratingProof(false);
+    }
+  };
+
+  const copyToClipboard = async () => {
+    try {
+      await navigator.clipboard.writeText(proofPost);
+      toast.success("Copied to clipboard! 📋");
+    } catch (error) {
+      toast.error("Failed to copy to clipboard");
+    }
+  };
 
   if (isLoading) {
     return (
@@ -200,6 +232,66 @@ export function RevenueWidget() {
               >
                 Add Your First Entry
               </Button>
+            </div>
+          )}
+
+          {/* Proof Post Generator */}
+          {revenue.total > 0 && (
+            <div className="mt-4 pt-4 border-t border-border">
+              <p className="text-sm font-medium mb-2">Generate Proof Post</p>
+              <div className="flex gap-2">
+                <Button
+                  onClick={() => generateProof('twitter')}
+                  disabled={generatingProof}
+                  size="sm"
+                  className="bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-xs flex-1"
+                >
+                  {generatingProof ? (
+                    <>
+                      <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      🐦 Twitter Proof
+                    </>
+                  )}
+                </Button>
+                <Button
+                  onClick={() => generateProof('linkedin')}
+                  disabled={generatingProof}
+                  size="sm"
+                  className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-xs flex-1"
+                >
+                  {generatingProof ? (
+                    <>
+                      <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      💼 LinkedIn Proof
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              {showProof && proofPost && (
+                <div className="mt-4 p-4 bg-gradient-to-br from-slate-950/50 to-slate-900/50 rounded-lg border border-purple-500/20">
+                  <p className="text-sm text-slate-300 mb-3 whitespace-pre-wrap leading-relaxed">
+                    {proofPost}
+                  </p>
+                  <Button
+                    onClick={copyToClipboard}
+                    size="sm"
+                    variant="outline"
+                    className="w-full text-xs"
+                  >
+                    <Copy className="h-3 w-3 mr-2" />
+                    Copy to Clipboard
+                  </Button>
+                </div>
+              )}
             </div>
           )}
         </CardContent>

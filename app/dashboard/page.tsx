@@ -2,14 +2,18 @@
 
 import { motion } from "framer-motion";
 import DashboardLayout from "@/components/layout/DashboardLayout";
+import { AuthGuard } from "@/components/AuthGuard";
 import { RevenueWidget } from "@/components/widgets/RevenueWidget";
 import { PipelineWidget } from "@/components/widgets/PipelineWidget";
 import { HLAWidget } from "@/components/widgets/HLAWidget";
 import { OutreachWidget } from "@/components/widgets/OutreachWidget";
+import { DailyReportWidget } from "@/components/widgets/DailyReportWidget";
+import { OperatorStatsWidget } from "@/components/widgets/OperatorStatsWidget";
 
 export default function DashboardPage() {
   return (
-    <DashboardLayout>
+    <AuthGuard>
+      <DashboardLayout>
       <motion.div
         className="space-y-8"
         initial={{ opacity: 0, y: 20 }}
@@ -71,9 +75,30 @@ export default function DashboardPage() {
           >
             <OutreachWidget />
           </motion.div>
+
+          {/* AI Daily Report - Full Width */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.6 }}
+            className="col-span-full"
+          >
+            <DailyReportWidget />
+          </motion.div>
+
+          {/* Operator Stats - Full Width */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.7 }}
+            className="col-span-full"
+          >
+            <OperatorStatsWidget />
+          </motion.div>
         </div>
       </motion.div>
     </DashboardLayout>
+    </AuthGuard>
   );
 }
 
