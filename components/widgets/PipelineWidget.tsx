@@ -4,7 +4,17 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, TrendingUp, Users, Target } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Plus, TrendingUp, Users, Target, Edit2, Trash2 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { QuickAddModal } from "./QuickAddModal";
@@ -55,6 +65,8 @@ async function fetchPipeline(activeOnly: boolean = false): Promise<PipelineData>
 
 export function PipelineWidget() {
   const [showAddModal, setShowAddModal] = useState(false);
+  const [editingDeal, setEditingDeal] = useState<PipelineDeal | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
   const { data, isLoading, error } = useQuery<PipelineData>({
@@ -76,7 +88,13 @@ export function PipelineWidget() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(deal),
       });
-      if (!res.ok) throw new Error("Failed to add deal");
+      
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        const errorMessage = errorData.error || `Failed to add deal (${res.status})`;
+        throw new Error(errorMessage);
+      }
+      
       return res.json();
     },
     onSuccess: () => {
@@ -85,7 +103,63 @@ export function PipelineWidget() {
       setShowAddModal(false);
     },
     onError: (error: Error) => {
+      console.error("Pipeline add error:", error);
       toast.error(error.message || "Failed to add deal");
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async (deal: {
+      id: string;
+      date?: string;
+      stage?: string;
+      client_name?: string;
+      deal_value?: number;
+      notes?: string;
+    }) => {
+      const res = await fetch("/api/pipeline", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(deal),
+      });
+      
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        const errorMessage = errorData.error || `Failed to update deal (${res.status})`;
+        throw new Error(errorMessage);
+      }
+      
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["pipeline"] });
+      toast.success("Deal updated! ✏️");
+      setEditingDeal(null);
+    },
+    onError: (error: Error) => {
+      console.error("Pipeline update error:", error);
+      toast.error(error.message || "Failed to update deal");
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/pipeline?id=${id}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to delete deal");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["pipeline"] });
+      toast.success("Deal deleted! 🗑️");
+      setDeleteId(null);
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to delete deal");
     },
   });
 
@@ -188,7 +262,7 @@ export function PipelineWidget() {
                 {pipeline.deals.slice(0, 5).map((deal) => (
                   <div
                     key={deal.id}
-                    className="flex items-start justify-between p-3 rounded border border-border"
+                    className="group flex items-start justify-between p-3 rounded border border-border hover:bg-secondary/50 transition-colors"
                   >
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
@@ -212,6 +286,24 @@ export function PipelineWidget() {
                           {deal.notes}
                         </p>
                       )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setEditingDeal(deal)}
+                        className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 hover:opacity-100"
+                      >
+                        <Edit2 className="h-3 w-3" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setDeleteId(deal.id)}
+                        className="h-7 w-7 p-0 text-red-500 hover:text-red-700 opacity-0 group-hover:opacity-100 hover:opacity-100"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
                     </div>
                   </div>
                 ))}
@@ -253,6 +345,73 @@ export function PipelineWidget() {
           }}
         />
       )}
+
+      {editingDeal && (
+        <QuickAddModal
+          type="pipeline"
+          onClose={() => setEditingDeal(null)}
+          onSubmit={(data) => {
+            const updatePayload: any = {
+              id: editingDeal.id,
+            };
+            
+            // Only include fields that are provided
+            if (data.date) {
+              updatePayload.date = data.date;
+            }
+            
+            if (data.stage) {
+              updatePayload.stage = data.stage;
+            }
+            
+            if (data.client_name !== undefined) {
+              updatePayload.client_name = data.client_name?.trim() || null;
+            }
+            
+            if (data.deal_value !== undefined && data.deal_value.trim()) {
+              const value = parseFloat(data.deal_value);
+              if (!isNaN(value)) {
+                updatePayload.deal_value = value;
+              } else {
+                updatePayload.deal_value = null;
+              }
+            }
+            
+            if (data.notes !== undefined) {
+              updatePayload.notes = data.notes?.trim() || null;
+            }
+            
+            updateMutation.mutate(updatePayload);
+          }}
+          initialData={{
+            date: editingDeal.date,
+            stage: editingDeal.stage,
+            client_name: editingDeal.client_name || "",
+            deal_value: editingDeal.deal_value ? String(editingDeal.deal_value) : "",
+            notes: editingDeal.notes || "",
+          }}
+        />
+      )}
+
+      <AlertDialog open={deleteId !== null} onOpenChange={(open) => !open && setDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Deal?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete this pipeline deal.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deleteId && deleteMutation.mutate(deleteId)}
+              className="bg-red-500 hover:bg-red-600"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

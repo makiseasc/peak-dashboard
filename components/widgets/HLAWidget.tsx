@@ -5,7 +5,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, Zap, Coins, Plus, Target } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { CheckCircle2, Zap, Coins, Plus, Target, Edit2, Trash2, X, Check } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useDashboard } from "@/contexts/DashboardContext";
@@ -46,6 +57,10 @@ export function HLAWidget() {
   const [showLevelUp, setShowLevelUp] = useState(false);
   const [newLevel, setNewLevel] = useState(0);
   const [previousCompletedCount, setPreviousCompletedCount] = useState(0);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editingHLA, setEditingHLA] = useState<HLA | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const { awardXP, awardGP, updateStreak, data: contextData } = useDashboard();
   const queryClient = useQueryClient();
 
@@ -99,7 +114,13 @@ export function HLAWidget() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(hla),
       });
-      if (!res.ok) throw new Error("Failed to add HLA");
+      
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        const errorMessage = errorData.error || `Failed to add HLA (${res.status})`;
+        throw new Error(errorMessage);
+      }
+      
       return res.json();
     },
     onSuccess: () => {
@@ -108,6 +129,7 @@ export function HLAWidget() {
       setShowAddModal(false);
     },
     onError: (error: Error) => {
+      console.error("HLA add error:", error);
       toast.error(error.message || "Failed to add HLA");
     },
   });
@@ -128,9 +150,69 @@ export function HLAWidget() {
     setPreviousCompletedCount(completedCount);
   }, [completedCount, totalCount, previousCompletedCount, awardGP, updateStreak]);
 
-  const handleToggle = (hla: HLA) => {
+  const handleToggle = (hla: HLA, e?: React.MouseEvent) => {
+    // Don't toggle if clicking on edit/delete buttons
+    if (e && (e.target as HTMLElement).closest('button, [role="button"]')) {
+      return;
+    }
     toggleMutation.mutate({ id: hla.id, completed: !hla.completed });
   };
+
+  const handleStartEdit = (hla: HLA, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingId(hla.id);
+    setEditTitle(hla.title);
+  };
+
+  const handleSaveEdit = async (hla: HLA) => {
+    if (!editTitle.trim()) {
+      toast.error("Title cannot be empty");
+      return;
+    }
+    
+    const res = await fetch("/api/hla", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: hla.id, title: editTitle.trim() }),
+    });
+    
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
+      toast.error(errorData.error || "Failed to update HLA");
+      return;
+    }
+    
+    queryClient.invalidateQueries({ queryKey: ["hla"] });
+    setEditingId(null);
+    setEditTitle("");
+    toast.success("HLA updated! ✏️");
+  };
+
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setEditTitle("");
+  };
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/hla?id=${id}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to delete HLA");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["hla"] });
+      toast.success("HLA deleted! 🗑️");
+      setDeleteId(null);
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to delete HLA");
+    },
+  });
 
   if (isLoading) {
     return (
@@ -207,43 +289,115 @@ export function HLAWidget() {
             hlaData.today.map((hla) => (
               <div
                 key={hla.id}
-                className="flex items-center gap-4 p-4 rounded-lg border border-border hover:bg-secondary/50 transition-colors cursor-pointer"
-                onClick={() => handleToggle(hla)}
+                className="group flex items-center gap-4 p-4 rounded-lg border border-border hover:bg-secondary/50 transition-colors"
               >
-                <Checkbox checked={hla.completed} />
-                <div className="flex-1">
-                  <span
-                    className={
-                      hla.completed
-                        ? "line-through text-muted-foreground"
-                        : "font-medium"
-                    }
-                  >
-                    {hla.title}
-                  </span>
-                  {hla.description && (
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {hla.description}
-                    </p>
-                  )}
-                  {hla.energy_level && (
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Energy Level: {hla.energy_level}/10
-                    </p>
+                <Checkbox 
+                  checked={hla.completed} 
+                  onCheckedChange={(checked) => {
+                    toggleMutation.mutate({ id: hla.id, completed: checked === true });
+                  }}
+                  className="cursor-pointer"
+                  onClick={(e) => e.stopPropagation()}
+                />
+                <div className="flex-1" onClick={(e) => handleToggle(hla, e)}>
+                  {editingId === hla.id ? (
+                    <div className="flex items-center gap-2">
+                      <Input
+                        value={editTitle}
+                        onChange={(e) => setEditTitle(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") handleSaveEdit(hla);
+                          if (e.key === "Escape") handleCancelEdit();
+                        }}
+                        className="h-8"
+                        autoFocus
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleSaveEdit(hla);
+                        }}
+                        className="h-8 w-8 p-0"
+                      >
+                        <Check className="h-4 w-4 text-green-500" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleCancelEdit();
+                        }}
+                        className="h-8 w-8 p-0"
+                      >
+                        <X className="h-4 w-4 text-red-500" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <>
+                      <span
+                        className={
+                          hla.completed
+                            ? "line-through text-muted-foreground"
+                            : "font-medium"
+                        }
+                      >
+                        {hla.title}
+                      </span>
+                      {hla.description && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {hla.description}
+                        </p>
+                      )}
+                      {hla.energy_level && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Energy Level: {hla.energy_level}/10
+                        </p>
+                      )}
+                    </>
                   )}
                 </div>
-                {hla.completed ? (
-                  <CheckCircle2 className="h-5 w-5 text-green-500" />
-                ) : (
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <div className="flex items-center gap-1">
-                      <Zap className="h-3 w-3 text-accent" />
-                      <span>+50 XP</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Coins className="h-3 w-3 text-warning" />
-                      <span>+3 GP</span>
-                    </div>
+                {editingId !== hla.id && (
+                  <div className="flex items-center gap-2">
+                    {hla.completed ? (
+                      <CheckCircle2 className="h-5 w-5 text-green-500" />
+                    ) : (
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <div className="flex items-center gap-1">
+                          <Zap className="h-3 w-3 text-accent" />
+                          <span>+50 XP</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Coins className="h-3 w-3 text-warning" />
+                          <span>+3 GP</span>
+                        </div>
+                      </div>
+                    )}
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEditingHLA(hla);
+                      }}
+                      className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 hover:opacity-100"
+                    >
+                      <Edit2 className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDeleteId(hla.id);
+                      }}
+                      className="h-8 w-8 p-0 text-red-500 hover:text-red-700 opacity-0 group-hover:opacity-100 hover:opacity-100"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
                 )}
               </div>
@@ -279,17 +433,107 @@ export function HLAWidget() {
           type="hla"
           onClose={() => setShowAddModal(false)}
           onSubmit={(data) => {
+            // Validate title before submitting
+            const title = (data.title || "").trim();
+            if (!title) {
+              toast.error("Title is required");
+              return;
+            }
+            
             addMutation.mutate({
               date: data.date || today,
-              title: data.title || "",
-              description: data.description,
-              energy_level: data.energy_level
+              title: title,
+              description: data.description?.trim() || undefined,
+              energy_level: data.energy_level && data.energy_level.trim()
                 ? parseInt(data.energy_level)
                 : undefined,
             });
           }}
         />
       )}
+
+      {editingHLA && (
+        <QuickAddModal
+          type="hla"
+          onClose={() => setEditingHLA(null)}
+          onSubmit={async (data) => {
+            // Validate title before submitting
+            const title = (data.title || "").trim();
+            if (!title) {
+              toast.error("Title is required");
+              return;
+            }
+            
+            try {
+              const updatePayload: any = {
+                id: editingHLA.id,
+                title: title,
+              };
+              
+              // Only include fields that are provided
+              if (data.description !== undefined) {
+                updatePayload.description = data.description?.trim() || null;
+              }
+              
+              if (data.energy_level !== undefined && data.energy_level.trim()) {
+                const energyNum = parseInt(data.energy_level);
+                if (!isNaN(energyNum) && energyNum >= 1 && energyNum <= 10) {
+                  updatePayload.energy_level = energyNum;
+                }
+              }
+              
+              if (data.date) {
+                updatePayload.date = data.date;
+              }
+              
+              const res = await fetch("/api/hla", {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(updatePayload),
+              });
+              
+              if (!res.ok) {
+                const errorData = await res.json().catch(() => ({}));
+                toast.error(errorData.error || "Failed to update HLA");
+                return;
+              }
+              
+              queryClient.invalidateQueries({ queryKey: ["hla"] });
+              toast.success("HLA updated! ✏️");
+              setEditingHLA(null);
+            } catch (error) {
+              console.error("HLA update error:", error);
+              toast.error("Failed to update HLA");
+            }
+          }}
+          initialData={{
+            date: editingHLA.date,
+            title: editingHLA.title,
+            description: editingHLA.description || "",
+            energy_level: editingHLA.energy_level ? String(editingHLA.energy_level) : "",
+          }}
+        />
+      )}
+
+      <AlertDialog open={deleteId !== null} onOpenChange={(open) => !open && setDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete HLA?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete this high-leverage action.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deleteId && deleteMutation.mutate(deleteId)}
+              className="bg-red-500 hover:bg-red-600"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

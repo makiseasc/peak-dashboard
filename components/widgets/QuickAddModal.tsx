@@ -23,17 +23,19 @@ import { Textarea } from "@/components/ui/textarea";
 interface QuickAddModalProps {
   type: "revenue" | "pipeline" | "hla" | "outreach";
   onClose: () => void;
-  onSubmit: (data: Record<string, string>) => void;
+  onSubmit: (data: Record<string, string>) => void | Promise<void>;
+  initialData?: Record<string, string>;
 }
 
-export function QuickAddModal({ type, onClose, onSubmit }: QuickAddModalProps) {
+export function QuickAddModal({ type, onClose, onSubmit, initialData }: QuickAddModalProps) {
   const [formData, setFormData] = useState<Record<string, string>>({
-    date: new Date().toISOString().split("T")[0],
+    date: initialData?.date || new Date().toISOString().split("T")[0],
+    ...initialData,
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formData);
+    await onSubmit(formData);
   };
 
   const handleChange = (field: string, value: string) => {
@@ -45,10 +47,10 @@ export function QuickAddModal({ type, onClose, onSubmit }: QuickAddModalProps) {
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>
-            {type === "revenue" && "Add Revenue Entry"}
-            {type === "pipeline" && "Add Pipeline Deal"}
-            {type === "hla" && "Add High-Leverage Action"}
-            {type === "outreach" && "Add Outreach Entry"}
+            {type === "revenue" && (initialData ? "Edit Revenue Entry" : "Add Revenue Entry")}
+            {type === "pipeline" && (initialData ? "Edit Pipeline Deal" : "Add Pipeline Deal")}
+            {type === "hla" && (initialData ? "Edit High-Leverage Action" : "Add High-Leverage Action")}
+            {type === "outreach" && (initialData ? "Edit Outreach Entry" : "Add Outreach Entry")}
           </DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -273,7 +275,9 @@ export function QuickAddModal({ type, onClose, onSubmit }: QuickAddModalProps) {
             <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit">Add Entry</Button>
+            <Button type="submit">
+              {initialData ? "Save Changes" : "Add Entry"}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

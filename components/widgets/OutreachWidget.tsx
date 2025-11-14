@@ -62,7 +62,13 @@ export function OutreachWidget() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(entry),
       });
-      if (!res.ok) throw new Error("Failed to add outreach");
+      
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        const errorMessage = errorData.error || `Failed to add outreach (${res.status})`;
+        throw new Error(errorMessage);
+      }
+      
       return res.json();
     },
     onSuccess: () => {
@@ -71,6 +77,7 @@ export function OutreachWidget() {
       setShowAddModal(false);
     },
     onError: (error: Error) => {
+      console.error("Outreach add error:", error);
       toast.error(error.message || "Failed to add outreach");
     },
   });

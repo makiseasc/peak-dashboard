@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 
 // GET - Fetch outreach data
 export async function GET(request: NextRequest) {
@@ -10,9 +10,17 @@ export async function GET(request: NextRequest) {
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - days);
 
-    const supabase = createClient();
+    if (!isSupabaseConfigured()) {
+      return NextResponse.json({
+        outreach: [],
+        totals: { sent: 0, replies: 0, positives: 0 },
+        responseRate: 0,
+        positiveRate: 0,
+        byPlatform: {},
+      });
+    }
 
-    let query = supabase
+    let query = supabase!
       .from('outreach')
       .select('*')
       .gte('date', startDate.toISOString().split('T')[0])
@@ -84,36 +92,71 @@ export async function POST(request: NextRequest) {
     const { date, platform, messages_sent, replies, positive_replies, campaign_name } = body;
 
     if (!date || !platform) {
+      console.error('Outreach POST: Missing required fields', { date, platform, body });
       return NextResponse.json(
         { error: 'Missing required fields: date, platform' },
         { status: 400 }
       );
     }
 
-    const supabase = createClient();
+    // Validate date format
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      console.error('Outreach POST: Invalid date format', { date });
+      return NextResponse.json(
+        { error: 'Invalid date format. Expected YYYY-MM-DD' },
+        { status: 400 }
+      );
+    }
 
-    const { data, error } = await supabase
+    if (!isSupabaseConfigured()) {
+      console.warn('Outreach POST: Supabase not configured');
+      return NextResponse.json({
+        success: true,
+        message: 'Supabase not configured. Data not persisted.',
+      });
+    }
+
+    const { data, error } = await supabase!
       .from('outreach')
       .insert([
         {
           date,
           platform,
-          messages_sent: messages_sent || 0,
-          replies: replies || 0,
-          positive_replies: positive_replies || 0,
-          campaign_name: campaign_name || null,
+          messages_sent: messages_sent ? parseInt(messages_sent) : 0,
+          replies: replies ? parseInt(replies) : 0,
+          positive_replies: positive_replies ? parseInt(positive_replies) : 0,
+          campaign_name: campaign_name?.trim() || null,
         },
       ])
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('Outreach POST: Supabase error', {
+        error: error.message,
+        code: error.code,
+        details: error.details,
+      });
+      throw error;
+    }
 
     return NextResponse.json({ success: true, data }, { status: 201 });
   } catch (error: any) {
-    console.error('Error creating outreach entry:', error);
+    console.error('Outreach POST: Error creating outreach entry', {
+      error: error.message,
+      code: error.code,
+      details: error.details,
+    });
+    
+    let errorMessage = 'Failed to create outreach entry';
+    if (error.code === '42501') {
+      errorMessage = 'Permission denied. Check Supabase RLS policies.';
+    } else if (error.message) {
+      errorMessage = error.message;
+    }
+
     return NextResponse.json(
-      { error: error.message || 'Failed to create outreach entry' },
+      { error: errorMessage, details: error.details || null },
       { status: 500 }
     );
   }

@@ -3,7 +3,17 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, DollarSign, TrendingUp, Calendar, Copy, Loader2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Plus, DollarSign, TrendingUp, Calendar, Copy, Loader2, Edit2, Trash2 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { QuickAddModal } from "./QuickAddModal";
@@ -31,6 +41,8 @@ async function fetchRevenue(days: number = 30): Promise<RevenueData> {
 
 export function RevenueWidget() {
   const [showAddModal, setShowAddModal] = useState(false);
+  const [editingEntry, setEditingEntry] = useState<RevenueEntry | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const [days, setDays] = useState(30);
   const [proofPost, setProofPost] = useState("");
   const [showProof, setShowProof] = useState(false);
@@ -55,7 +67,13 @@ export function RevenueWidget() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(entry),
       });
-      if (!res.ok) throw new Error("Failed to add revenue");
+      
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        const errorMessage = errorData.error || `Failed to add revenue (${res.status})`;
+        throw new Error(errorMessage);
+      }
+      
       return res.json();
     },
     onSuccess: () => {
@@ -64,7 +82,62 @@ export function RevenueWidget() {
       setShowAddModal(false);
     },
     onError: (error: Error) => {
+      console.error("Revenue add error:", error);
       toast.error(error.message || "Failed to add revenue");
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async (entry: {
+      id: string;
+      date?: string;
+      source?: string;
+      amount?: number;
+      description?: string;
+    }) => {
+      const res = await fetch("/api/revenue", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(entry),
+      });
+      
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        const errorMessage = errorData.error || `Failed to update revenue (${res.status})`;
+        throw new Error(errorMessage);
+      }
+      
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["revenue"] });
+      toast.success("Revenue entry updated! ✏️");
+      setEditingEntry(null);
+    },
+    onError: (error: Error) => {
+      console.error("Revenue update error:", error);
+      toast.error(error.message || "Failed to update revenue");
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/revenue?id=${id}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to delete revenue");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["revenue"] });
+      toast.success("Revenue entry deleted! 🗑️");
+      setDeleteId(null);
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to delete revenue");
     },
   });
 
@@ -199,7 +272,7 @@ export function RevenueWidget() {
                 {revenue.revenue.slice(0, 5).map((entry) => (
                   <div
                     key={entry.id}
-                    className="flex items-center justify-between p-2 rounded border border-border text-sm"
+                    className="group flex items-center justify-between p-2 rounded border border-border text-sm hover:bg-secondary/50 transition-colors"
                   >
                     <div className="flex-1">
                       <p className="font-medium capitalize">{entry.source}</p>
@@ -213,7 +286,25 @@ export function RevenueWidget() {
                         {new Date(entry.date).toLocaleDateString()}
                       </p>
                     </div>
-                    <p className="font-semibold">${entry.amount.toLocaleString()}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-semibold">${entry.amount.toLocaleString()}</p>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setEditingEntry(entry)}
+                        className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 hover:opacity-100"
+                      >
+                        <Edit2 className="h-3 w-3" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setDeleteId(entry.id)}
+                        className="h-7 w-7 p-0 text-red-500 hover:text-red-700 opacity-0 group-hover:opacity-100 hover:opacity-100"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -311,6 +402,48 @@ export function RevenueWidget() {
           }}
         />
       )}
+
+      {editingEntry && (
+        <QuickAddModal
+          type="revenue"
+          onClose={() => setEditingEntry(null)}
+          onSubmit={(data) => {
+            updateMutation.mutate({
+              id: editingEntry.id,
+              date: data.date || editingEntry.date,
+              source: data.source || editingEntry.source,
+              amount: parseFloat(data.amount || String(editingEntry.amount)),
+              description: data.description || editingEntry.description,
+            });
+          }}
+          initialData={{
+            date: editingEntry.date,
+            source: editingEntry.source,
+            amount: String(editingEntry.amount),
+            description: editingEntry.description || "",
+          }}
+        />
+      )}
+
+      <AlertDialog open={deleteId !== null} onOpenChange={(open) => !open && setDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Revenue Entry?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete this revenue entry.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deleteId && deleteMutation.mutate(deleteId)}
+              className="bg-red-500 hover:bg-red-600"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
