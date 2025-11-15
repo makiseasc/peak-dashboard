@@ -14,6 +14,27 @@ export default function DashboardPage() {
   return (
     <AuthGuard>
       <DashboardLayout>
+      <div className="min-h-screen relative overflow-hidden -m-8 p-8">
+        {/* Base layer - Deep navy */}
+        <div className="absolute inset-0 bg-[#0a0e27]" />
+        
+        {/* Gradient layer - Subtle variation */}
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950" />
+        
+        {/* Radial gradient glows - Purple & Cyan */}
+        <div className="absolute inset-0 opacity-40">
+          <div className="absolute top-1/4 left-1/4 w-[600px] h-[600px] bg-purple-600/30 rounded-full blur-[150px]" />
+          <div className="absolute bottom-1/4 right-1/4 w-[600px] h-[600px] bg-cyan-500/25 rounded-full blur-[150px]" />
+        </div>
+        
+        {/* Animated grid overlay */}
+        <div className="absolute inset-0 opacity-[0.015] dashboard-grid" />
+        
+        {/* Grain texture */}
+        <div className="absolute inset-0 opacity-[0.02] bg-noise" />
+        
+        {/* Content layer */}
+        <div className="relative z-10">
       <motion.div
         className="space-y-8"
         initial={{ opacity: 0, y: 20 }}
@@ -41,46 +62,69 @@ export default function DashboardPage() {
         </div>
 
         {/* Widget Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <motion.div 
+          className="grid grid-cols-1 lg:grid-cols-3 gap-6"
+          variants={{
+            hidden: { opacity: 0 },
+            show: {
+              opacity: 1,
+              transition: {
+                staggerChildren: 0.1
+              }
+            }
+          }}
+          initial="hidden"
+          animate="show"
+        >
           {/* Top Row */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
+            variants={{
+              hidden: { opacity: 0, y: 20 },
+              show: { opacity: 1, y: 0 }
+            }}
+            transition={{ duration: 0.3 }}
           >
             <RevenueWidget />
           </motion.div>
 
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.3 }}
+            variants={{
+              hidden: { opacity: 0, y: 20 },
+              show: { opacity: 1, y: 0 }
+            }}
+            transition={{ duration: 0.3 }}
           >
             <PipelineWidget />
           </motion.div>
 
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.4 }}
+            variants={{
+              hidden: { opacity: 0, y: 20 },
+              show: { opacity: 1, y: 0 }
+            }}
+            transition={{ duration: 0.3 }}
           >
             <HLAWidget />
           </motion.div>
 
           {/* Second Row */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.5 }}
+            variants={{
+              hidden: { opacity: 0, y: 20 },
+              show: { opacity: 1, y: 0 }
+            }}
+            transition={{ duration: 0.3 }}
           >
             <OutreachWidget />
           </motion.div>
 
           {/* AI Daily Report - Full Width */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.6 }}
+            variants={{
+              hidden: { opacity: 0, y: 20 },
+              show: { opacity: 1, y: 0 }
+            }}
+            transition={{ duration: 0.3 }}
             className="col-span-full"
           >
             <DailyReportWidget />
@@ -88,15 +132,19 @@ export default function DashboardPage() {
 
           {/* Operator Stats - Full Width */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.7 }}
+            variants={{
+              hidden: { opacity: 0, y: 20 },
+              show: { opacity: 1, y: 0 }
+            }}
+            transition={{ duration: 0.3 }}
             className="col-span-full"
           >
             <OperatorStatsWidget />
           </motion.div>
-        </div>
+        </motion.div>
       </motion.div>
+        </div>
+      </div>
     </DashboardLayout>
     </AuthGuard>
   );

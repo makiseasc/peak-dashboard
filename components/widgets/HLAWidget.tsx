@@ -22,6 +22,10 @@ import { toast } from "sonner";
 import { useDashboard } from "@/contexts/DashboardContext";
 import { LevelUpCelebration } from "@/components/LevelUpCelebration";
 import { QuickAddModal } from "./QuickAddModal";
+import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
+import { Skeleton } from "@/components/ui/skeleton";
+import confetti from "canvas-confetti";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface HLA {
   id: string;
@@ -61,6 +65,8 @@ export function HLAWidget() {
   const [editTitle, setEditTitle] = useState("");
   const [editingHLA, setEditingHLA] = useState<HLA | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [showMilestone, setShowMilestone] = useState(false);
+  const [milestoneStreak, setMilestoneStreak] = useState(0);
   const { awardXP, awardGP, updateStreak, data: contextData } = useDashboard();
   const queryClient = useQueryClient();
 
@@ -81,20 +87,43 @@ export function HLAWidget() {
       if (!res.ok) throw new Error("Failed to update HLA");
       return res.json();
     },
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["hla"] });
-      
+    onSuccess: async (_, variables) => {
       // Award XP and GP if completing (not uncompleting)
       if (variables.completed) {
         const leveledUp = awardXP(50, "HLA Completed");
         awardGP(3, "HLA Completed");
         
-        toast.success("🎯 HLA Completed! +50 XP and +3 GP earned");
+        // Invalidate and fetch updated data to check streak
+        await queryClient.invalidateQueries({ queryKey: ["hla"] });
+        const updatedData = await queryClient.fetchQuery({ queryKey: ["hla", today] });
+        const currentStreak = (updatedData as HLAData)?.streakCount || 0;
+        
+        // Trigger confetti on streak milestones
+        if (currentStreak === 3 || currentStreak === 7 || currentStreak === 30 || currentStreak === 100) {
+          setMilestoneStreak(currentStreak);
+          setShowMilestone(true);
+          
+          confetti({
+            particleCount: 150,
+            spread: 90,
+            origin: { y: 0.5 },
+            colors: ['#9333ea', '#6366f1', '#06b6d4', '#8b5cf6']
+          });
+          
+          // Auto-close after 3 seconds
+          setTimeout(() => setShowMilestone(false), 3000);
+        } else {
+          toast.success("🎯 HLA Completed!", {
+            description: "+50 XP and +3 GP earned",
+          });
+        }
         
         if (leveledUp) {
           setNewLevel(contextData.level + 1);
           setShowLevelUp(true);
         }
+      } else {
+        queryClient.invalidateQueries({ queryKey: ["hla"] });
       }
     },
     onError: (error: Error) => {
@@ -220,8 +249,14 @@ export function HLAWidget() {
         <CardHeader>
           <CardTitle>Daily High-Leverage Activities</CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="text-muted-foreground">Loading...</div>
+        <CardContent className="space-y-4">
+          <Skeleton className="h-8 w-32" />
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-3/4" />
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-5/6" />
+          </div>
         </CardContent>
       </Card>
     );
@@ -249,7 +284,9 @@ export function HLAWidget() {
         />
       )}
 
-      <Card>
+      <Card className="relative overflow-hidden bg-gradient-to-br from-slate-900/80 via-slate-900/60 to-slate-800/40 backdrop-blur-xl border border-slate-700/50 shadow-[0_0_50px_rgba(139,92,246,0.1),0_8px_32px_rgba(0,0,0,0.3)] hover:shadow-[0_0_60px_rgba(139,92,246,0.2),0_8px_40px_rgba(0,0,0,0.4)] hover:border-purple-500/30 transition-all duration-300 group">
+          <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-cyan-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+          <div className="relative z-10">
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2">
@@ -265,10 +302,13 @@ export function HLAWidget() {
               <Button
                 size="sm"
                 onClick={() => setShowAddModal(true)}
-                className="gap-2"
+                className="gap-2 relative overflow-hidden bg-gradient-to-r from-purple-500 via-indigo-500 to-cyan-500 hover:from-purple-600 hover:via-indigo-600 hover:to-cyan-600 text-white font-semibold shadow-[0_0_20px_rgba(139,92,246,0.4)] hover:shadow-[0_0_30px_rgba(139,92,246,0.6)] border-0"
               >
-                <Plus className="h-4 w-4" />
-                Add
+                <span className="relative z-10 flex items-center gap-2">
+                  <Plus className="h-4 w-4" />
+                  Add
+                </span>
+                <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-cyan-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               </Button>
             </div>
           </div>
@@ -278,10 +318,14 @@ export function HLAWidget() {
           <div className="flex items-center justify-between p-3 rounded-lg bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20">
             <div className="flex items-center gap-2">
               <Zap className="h-4 w-4 text-purple-400" />
-              <span className="text-sm font-medium text-purple-300">XP: {totalXP}</span>
+              <span className="text-2xl font-bold bg-gradient-to-r from-purple-400 to-cyan-400 bg-clip-text text-transparent">
+                XP: <AnimatedNumber value={totalXP} />
+              </span>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-green-400">🔥 Streak: {streakCount} days</span>
+              <span className="text-2xl font-bold bg-gradient-to-r from-green-400 to-cyan-400 bg-clip-text text-transparent">
+                🔥 Streak: <AnimatedNumber value={streakCount} /> days
+              </span>
             </div>
           </div>
 
@@ -426,6 +470,7 @@ export function HLAWidget() {
             </div>
           )}
         </CardContent>
+          </div>
       </Card>
 
       {showAddModal && (
@@ -534,6 +579,33 @@ export function HLAWidget() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <AnimatePresence>
+        {showMilestone && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+            onClick={() => setShowMilestone(false)}
+          >
+            <div className="relative bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 border border-purple-500/50 rounded-2xl p-12 shadow-[0_0_100px_rgba(139,92,246,0.5)] max-w-md text-center">
+              {/* Glow effect */}
+              <div className="absolute inset-0 bg-gradient-to-br from-purple-500/20 to-cyan-500/20 rounded-2xl blur-xl" />
+              
+              <div className="relative z-10">
+                <div className="text-6xl mb-4">🔥</div>
+                <h2 className="text-4xl font-bold mb-2 bg-gradient-to-r from-purple-400 to-cyan-400 bg-clip-text text-transparent">
+                  {milestoneStreak} Day Streak!
+                </h2>
+                <p className="text-slate-300 text-lg">
+                  Peak execution unlocked
+                </p>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 }

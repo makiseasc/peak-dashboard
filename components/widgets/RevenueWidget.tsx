@@ -17,6 +17,8 @@ import { Plus, DollarSign, TrendingUp, Calendar, Copy, Loader2, Edit2, Trash2 } 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { QuickAddModal } from "./QuickAddModal";
+import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface RevenueEntry {
   id: string;
@@ -176,8 +178,14 @@ export function RevenueWidget() {
         <CardHeader>
           <CardTitle>Revenue</CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="text-muted-foreground">Loading...</div>
+        <CardContent className="space-y-4">
+          <Skeleton className="h-8 w-32" />
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-3/4" />
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-5/6" />
+          </div>
         </CardContent>
       </Card>
     );
@@ -200,7 +208,9 @@ export function RevenueWidget() {
 
   return (
     <>
-      <Card>
+      <Card className="relative overflow-hidden bg-gradient-to-br from-slate-900/80 via-slate-900/60 to-slate-800/40 backdrop-blur-xl border border-slate-700/50 shadow-[0_0_50px_rgba(139,92,246,0.1),0_8px_32px_rgba(0,0,0,0.3)] hover:shadow-[0_0_60px_rgba(139,92,246,0.2),0_8px_40px_rgba(0,0,0,0.4)] hover:border-purple-500/30 transition-all duration-300 group">
+          <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-cyan-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+          <div className="relative z-10">
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2">
@@ -210,10 +220,13 @@ export function RevenueWidget() {
             <Button
               size="sm"
               onClick={() => setShowAddModal(true)}
-              className="gap-2"
+              className="gap-2 relative overflow-hidden bg-gradient-to-r from-purple-500 via-indigo-500 to-cyan-500 hover:from-purple-600 hover:via-indigo-600 hover:to-cyan-600 text-white font-semibold shadow-[0_0_20px_rgba(139,92,246,0.4)] hover:shadow-[0_0_30px_rgba(139,92,246,0.6)] border-0"
             >
-              <Plus className="h-4 w-4" />
-              Add Entry
+              <span className="relative z-10 flex items-center gap-2">
+                <Plus className="h-4 w-4" />
+                Add Entry
+              </span>
+              <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-cyan-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
             </Button>
           </div>
         </CardHeader>
@@ -222,7 +235,9 @@ export function RevenueWidget() {
           <div className="flex items-center justify-between p-4 rounded-lg bg-gradient-to-br from-purple-500/10 to-indigo-500/10 border border-purple-500/20">
             <div>
               <p className="text-sm text-muted-foreground mb-1">Total Revenue</p>
-              <p className="text-3xl font-bold">${revenue.total.toLocaleString()}</p>
+              <p className="text-5xl font-bold font-mono mb-2 bg-gradient-to-r from-purple-400 via-indigo-400 to-cyan-400 bg-clip-text text-transparent animate-shimmer">
+                $<AnimatedNumber value={revenue.total} decimals={0} />
+              </p>
               <p className="text-xs text-muted-foreground mt-1">
                 Last {days} days
               </p>
@@ -386,6 +401,7 @@ export function RevenueWidget() {
             </div>
           )}
         </CardContent>
+          </div>
       </Card>
 
       {showAddModal && (
