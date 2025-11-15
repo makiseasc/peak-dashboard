@@ -1,151 +1,113 @@
 "use client";
 
-import { motion } from "framer-motion";
-import DashboardLayout from "@/components/layout/DashboardLayout";
 import { AuthGuard } from "@/components/AuthGuard";
+import { SideNav } from "@/components/ui/SideNav";
+import { AnalyticsCard } from "@/components/ui/AnalyticsCard";
+import { MetricTile } from "@/components/ui/MetricTile";
+import { RevenueLineChart } from "@/components/charts/RevenueLineChart";
+import { PipelineFunnel } from "@/components/charts/PipelineFunnel";
+import { XPLineChart } from "@/components/charts/XPLineChart";
+import { DollarSign, TrendingUp, Zap, Target } from "lucide-react";
 import { RevenueWidget } from "@/components/widgets/RevenueWidget";
 import { PipelineWidget } from "@/components/widgets/PipelineWidget";
 import { HLAWidget } from "@/components/widgets/HLAWidget";
 import { OutreachWidget } from "@/components/widgets/OutreachWidget";
-import { DailyReportWidget } from "@/components/widgets/DailyReportWidget";
-import { OperatorStatsWidget } from "@/components/widgets/OperatorStatsWidget";
 
 export default function DashboardPage() {
+  // Sample data for charts - replace with real data from API
+  const revenueData = [
+    { date: 'Nov 1', amount: 0 },
+    { date: 'Nov 8', amount: 0 },
+    { date: 'Nov 15', amount: 0 },
+  ];
+  
+  const pipelineData = [
+    { stage: 'Discovery', count: 0 },
+    { stage: 'Proposal', count: 0 },
+    { stage: 'Negotiation', count: 0 },
+    { stage: 'Closed', count: 0 },
+  ];
+  
+  const xpData = [
+    { date: 'Mon', xp: 30 },
+    { date: 'Tue', xp: 30 },
+    { date: 'Wed', xp: 30 },
+  ];
+
   return (
     <AuthGuard>
-      <DashboardLayout>
-      <div className="min-h-screen relative overflow-hidden -m-8 p-8">
-        {/* Base layer - Deep navy */}
+      <div className="min-h-screen relative overflow-hidden">
+        {/* Deep space background */}
         <div className="absolute inset-0 bg-[#0a0e27]" />
-        
-        {/* Gradient layer - Subtle variation */}
         <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950" />
         
-        {/* Radial gradient glows - Purple & Cyan */}
-        <div className="absolute inset-0 opacity-40">
-          <div className="absolute top-1/4 left-1/4 w-[600px] h-[600px] bg-purple-600/30 rounded-full blur-[150px]" />
-          <div className="absolute bottom-1/4 right-1/4 w-[600px] h-[600px] bg-cyan-500/25 rounded-full blur-[150px]" />
+        {/* Radial glows */}
+        <div className="absolute inset-0 opacity-30">
+          <div className="absolute top-1/4 left-1/4 w-[800px] h-[800px] bg-purple-600/30 rounded-full blur-[200px]" />
+          <div className="absolute bottom-1/4 right-1/4 w-[800px] h-[800px] bg-cyan-500/25 rounded-full blur-[200px]" />
         </div>
         
-        {/* Animated grid overlay */}
-        <div className="absolute inset-0 opacity-[0.015] dashboard-grid" />
-        
-        {/* Grain texture */}
-        <div className="absolute inset-0 opacity-[0.02] bg-noise" />
-        
-        {/* Content layer */}
-        <div className="relative z-10">
-      <motion.div
-        className="space-y-8"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <motion.h2
-            className="text-3xl font-bold tracking-tight bg-gradient-to-r from-purple-400 via-cyan-400 to-teal-300 text-transparent bg-clip-text"
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.6, delay: 0.1 }}
-          >
-            PEAK Dashboard
-          </motion.h2>
-          <motion.p
-            className="text-sm text-gray-400"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-          >
-            Empire Operations Command Center
-          </motion.p>
+        {/* Animated grid */}
+        <div className="absolute inset-0 opacity-[0.015]">
+          <div className="w-full h-full bg-grid animate-grid-move" />
         </div>
+        
+        {/* Layout */}
+        <div className="relative z-10 flex">
+          <SideNav />
+          <main className="flex-1 overflow-auto">
+            <div className="p-8">
+              {/* Page Header */}
+              <div className="mb-8">
+                <h1 className="text-4xl font-bold mb-2">
+                  <span className="bg-gradient-to-r from-purple-400 to-cyan-400 bg-clip-text text-transparent">
+                    PEAK
+                  </span>
+                  {" "}
+                  <span className="text-white">Dashboard</span>
+                </h1>
+                <p className="text-slate-400">Empire Operations Command Center</p>
+              </div>
 
-        {/* Widget Grid */}
-        <motion.div 
-          className="grid grid-cols-1 lg:grid-cols-3 gap-6"
-          variants={{
-            hidden: { opacity: 0 },
-            show: {
-              opacity: 1,
-              transition: {
-                staggerChildren: 0.1
-              }
-            }
-          }}
-          initial="hidden"
-          animate="show"
-        >
-          {/* Top Row */}
-          <motion.div
-            variants={{
-              hidden: { opacity: 0, y: 20 },
-              show: { opacity: 1, y: 0 }
-            }}
-            transition={{ duration: 0.3 }}
-          >
-            <RevenueWidget />
-          </motion.div>
+              {/* Top Metrics Strip */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                <MetricTile label="XP Today" value="30" trend={0} icon={<Zap className="w-5 h-5" />} />
+                <MetricTile label="Total Revenue" value="$0" trend={0} icon={<DollarSign className="w-5 h-5" />} />
+                <MetricTile label="Active Deals" value="0" icon={<Target className="w-5 h-5" />} />
+                <MetricTile label="Messages Sent" value="0" icon={<TrendingUp className="w-5 h-5" />} />
+              </div>
 
-          <motion.div
-            variants={{
-              hidden: { opacity: 0, y: 20 },
-              show: { opacity: 1, y: 0 }
-            }}
-            transition={{ duration: 0.3 }}
-          >
-            <PipelineWidget />
-          </motion.div>
+              {/* Main Analytics Grid */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                {/* Revenue Analytics */}
+                <AnalyticsCard title="Revenue" subtitle="Last 30 days">
+                  <RevenueLineChart data={revenueData} />
+                </AnalyticsCard>
 
-          <motion.div
-            variants={{
-              hidden: { opacity: 0, y: 20 },
-              show: { opacity: 1, y: 0 }
-            }}
-            transition={{ duration: 0.3 }}
-          >
-            <HLAWidget />
-          </motion.div>
+                {/* Pipeline Funnel */}
+                <AnalyticsCard title="Pipeline" subtitle="Deal stages">
+                  <PipelineFunnel data={pipelineData} />
+                </AnalyticsCard>
 
-          {/* Second Row */}
-          <motion.div
-            variants={{
-              hidden: { opacity: 0, y: 20 },
-              show: { opacity: 1, y: 0 }
-            }}
-            transition={{ duration: 0.3 }}
-          >
-            <OutreachWidget />
-          </motion.div>
+                {/* XP Tracking */}
+                <AnalyticsCard title="Execution" subtitle="XP over time">
+                  <XPLineChart data={xpData} />
+                </AnalyticsCard>
+              </div>
 
-          {/* AI Daily Report - Full Width */}
-          <motion.div
-            variants={{
-              hidden: { opacity: 0, y: 20 },
-              show: { opacity: 1, y: 0 }
-            }}
-            transition={{ duration: 0.3 }}
-            className="col-span-full"
-          >
-            <DailyReportWidget />
-          </motion.div>
-
-          {/* Operator Stats - Full Width */}
-          <motion.div
-            variants={{
-              hidden: { opacity: 0, y: 20 },
-              show: { opacity: 1, y: 0 }
-            }}
-            transition={{ duration: 0.3 }}
-            className="col-span-full"
-          >
-            <OperatorStatsWidget />
-          </motion.div>
-        </motion.div>
-      </motion.div>
+              {/* Existing Widgets Grid */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <RevenueWidget />
+                <PipelineWidget />
+                <div className="space-y-6">
+                  <HLAWidget />
+                  <OutreachWidget />
+                </div>
+              </div>
+            </div>
+          </main>
         </div>
       </div>
-    </DashboardLayout>
     </AuthGuard>
   );
 }
