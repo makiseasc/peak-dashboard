@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { AnalyticsCard } from "@/components/ui/AnalyticsCard";
+import { CheckItem } from "@/components/ui/CheckItem";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
@@ -16,7 +18,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { CheckCircle2, Zap, Coins, Plus, Target, Edit2, Trash2, X, Check } from "lucide-react";
+import { CheckCircle2, Zap, Coins, Plus, Target, Edit2, Trash2, X, Check, Flame } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useDashboard } from "@/contexts/DashboardContext";
@@ -245,33 +247,21 @@ export function HLAWidget() {
 
   if (isLoading) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Daily High-Leverage Activities</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
+      <AnalyticsCard title="Daily High-Leverage Activities" subtitle="Loading...">
+        <div className="space-y-4">
           <Skeleton className="h-8 w-32" />
           <Skeleton className="h-4 w-full" />
           <Skeleton className="h-4 w-3/4" />
-          <div className="space-y-2">
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-5/6" />
-          </div>
-        </CardContent>
-      </Card>
+        </div>
+      </AnalyticsCard>
     );
   }
 
   if (error) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Daily High-Leverage Activities</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-destructive">Error loading HLA data</div>
-        </CardContent>
-      </Card>
+      <AnalyticsCard title="Daily High-Leverage Activities" subtitle="Error">
+        <div className="text-destructive">Error loading HLA data</div>
+      </AnalyticsCard>
     );
   }
 
@@ -284,191 +274,79 @@ export function HLAWidget() {
         />
       )}
 
-      <Card className="relative overflow-hidden bg-gradient-to-br from-slate-900/80 via-slate-900/60 to-slate-800/40 backdrop-blur-xl border border-white/10 shadow-[0_0_30px_rgba(0,0,0,0.45)] hover:shadow-[0_0_40px_rgba(147,51,234,0.15)] hover:border-purple-500/20 transition-all duration-300 group">
-          <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-cyan-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-          <div className="relative z-10">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <Target className="h-5 w-5" />
-              Daily High-Leverage Activities
-            </CardTitle>
-            <div className="flex items-center gap-2">
-              <Badge
-                variant={completedCount === totalCount ? "default" : "secondary"}
-              >
-                {completedCount}/{totalCount} Complete
-              </Badge>
-              <Button
-                size="sm"
-                onClick={() => setShowAddModal(true)}
-                className="gap-2 bg-purple-600 hover:bg-purple-500 text-white font-semibold shadow-[0_0_20px_rgba(139,92,246,0.3)] hover:shadow-[0_0_30px_rgba(139,92,246,0.5)] border-0 transition-all duration-200"
-              >
-                <Plus className="h-4 w-4" />
-                Add
-              </Button>
+      <AnalyticsCard 
+        title="Daily High-Leverage Activities"
+        subtitle={`${completedCount}/${totalCount} Complete`}
+      >
+        {/* XP & Streak metrics */}
+        <div className="grid grid-cols-2 gap-4 mb-6">
+          <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs text-slate-400 uppercase tracking-wide">XP</p>
+              <Zap className="w-4 h-4 text-purple-400" />
             </div>
+            <p className="text-3xl font-bold font-mono text-white">
+              <AnimatedNumber value={totalXP} />
+            </p>
           </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* XP and Streak Display */}
-          <div className="flex items-center justify-between p-3 rounded-lg bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20">
-            <div className="flex items-center gap-2">
-              <Zap className="h-4 w-4 text-purple-400" />
-              <span className="text-2xl font-bold text-purple-300">
-                XP: <AnimatedNumber value={totalXP} />
-              </span>
+          <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs text-slate-400 uppercase tracking-wide">Streak</p>
+              <Flame className="w-4 h-4 text-cyan-400" />
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-2xl font-bold text-cyan-300">
-                🔥 Streak: <AnimatedNumber value={streakCount} /> days
-              </span>
-            </div>
+            <p className="text-3xl font-bold font-mono text-white">
+              <AnimatedNumber value={streakCount} /> days
+            </p>
           </div>
+        </div>
 
+        {/* HLA checklist - use CheckItem component */}
+        <div className="space-y-3 mb-6">
           {hlaData.today.length > 0 ? (
             hlaData.today.map((hla) => (
-              <div
+              <CheckItem
                 key={hla.id}
-                className="group flex items-center gap-4 p-4 rounded-lg border border-border hover:bg-secondary/50 transition-colors"
-              >
-                <Checkbox 
-                  checked={hla.completed} 
-                  onCheckedChange={(checked) => {
-                    toggleMutation.mutate({ id: hla.id, completed: checked === true });
-                  }}
-                  className="cursor-pointer"
-                  onClick={(e) => e.stopPropagation()}
-                />
-                <div className="flex-1" onClick={(e) => handleToggle(hla, e)}>
-                  {editingId === hla.id ? (
-                    <div className="flex items-center gap-2">
-                      <Input
-                        value={editTitle}
-                        onChange={(e) => setEditTitle(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") handleSaveEdit(hla);
-                          if (e.key === "Escape") handleCancelEdit();
-                        }}
-                        className="h-8"
-                        autoFocus
-                        onClick={(e) => e.stopPropagation()}
-                      />
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleSaveEdit(hla);
-                        }}
-                        className="h-8 w-8 p-0"
-                      >
-                        <Check className="h-4 w-4 text-green-500" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleCancelEdit();
-                        }}
-                        className="h-8 w-8 p-0"
-                      >
-                        <X className="h-4 w-4 text-red-500" />
-                      </Button>
-                    </div>
-                  ) : (
-                    <>
-                      <span
-                        className={
-                          hla.completed
-                            ? "line-through text-muted-foreground"
-                            : "font-medium"
-                        }
-                      >
-                        {hla.title}
-                      </span>
-                      {hla.description && (
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {hla.description}
-                        </p>
-                      )}
-                      {hla.energy_level && (
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Energy Level: {hla.energy_level}/10
-                        </p>
-                      )}
-                    </>
-                  )}
-                </div>
-                {editingId !== hla.id && (
-                  <div className="flex items-center gap-2">
-                    {hla.completed ? (
-                      <CheckCircle2 className="h-5 w-5 text-green-500" />
-                    ) : (
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <div className="flex items-center gap-1">
-                          <Zap className="h-3 w-3 text-accent" />
-                          <span>+50 XP</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Coins className="h-3 w-3 text-warning" />
-                          <span>+3 GP</span>
-                        </div>
-                      </div>
-                    )}
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setEditingHLA(hla);
-                      }}
-                      className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 hover:opacity-100"
-                    >
-                      <Edit2 className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setDeleteId(hla.id);
-                      }}
-                      className="h-8 w-8 p-0 text-red-500 hover:text-red-700 opacity-0 group-hover:opacity-100 hover:opacity-100"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                )}
-              </div>
+                text={hla.title}
+                completed={hla.completed}
+                onToggle={() => toggleMutation.mutate({ id: hla.id, completed: !hla.completed })}
+              />
             ))
           ) : (
-            <div className="text-center py-8 text-muted-foreground">
-              <Target className="h-12 w-12 mx-auto mb-2 opacity-50" />
-              <p>No HLAs for today yet</p>
+            <div className="text-center py-8 border border-white/10 rounded-xl bg-white/5">
+              <Target className="w-12 h-12 text-slate-600 mx-auto mb-4" />
+              <p className="text-slate-400 mb-4">No HLAs for today yet</p>
               <Button
-                variant="outline"
-                size="sm"
                 onClick={() => setShowAddModal(true)}
-                className="mt-4"
+                className="bg-gradient-to-r from-purple-600 to-cyan-500 hover:from-purple-500 hover:to-cyan-400 text-white"
               >
-                Add Your First HLA
+                + Add
               </Button>
             </div>
           )}
+        </div>
 
-          {totalCount > 0 && completedCount === totalCount && (
-            <div className="mt-4 p-4 rounded-lg bg-green-500/10 border border-green-500/20">
-              <p className="text-sm font-medium text-green-400 flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4" />
+        {/* Success message - only when all complete */}
+        {totalCount > 0 && completedCount === totalCount && (
+          <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-4 text-center mb-6">
+            <div className="flex items-center justify-center gap-2">
+              <Check className="w-5 h-5 text-green-400" />
+              <p className="text-green-400 font-medium">
                 All HLAs completed for today! Outstanding work.
               </p>
             </div>
-          )}
-        </CardContent>
           </div>
-      </Card>
+        )}
+
+        {/* Add button */}
+        {hlaData.today.length > 0 && (
+          <Button 
+            onClick={() => setShowAddModal(true)}
+            className="w-full bg-gradient-to-r from-purple-600 to-cyan-500 hover:from-purple-500 hover:to-cyan-400 text-white font-semibold"
+          >
+            + Add
+          </Button>
+        )}
+      </AnalyticsCard>
 
       {showAddModal && (
         <QuickAddModal

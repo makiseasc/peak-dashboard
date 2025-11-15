@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { AnalyticsCard } from "@/components/ui/AnalyticsCard";
 import { Badge } from "@/components/ui/badge";
 import {
   AlertDialog,
@@ -167,33 +168,21 @@ export function PipelineWidget() {
 
   if (isLoading) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Pipeline</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
+      <AnalyticsCard title="Pipeline" subtitle="Deal stages">
+        <div className="space-y-4">
           <Skeleton className="h-8 w-32" />
           <Skeleton className="h-4 w-full" />
           <Skeleton className="h-4 w-3/4" />
-          <div className="space-y-2">
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-5/6" />
-          </div>
-        </CardContent>
-      </Card>
+        </div>
+      </AnalyticsCard>
     );
   }
 
   if (error) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Pipeline</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-destructive">Error loading pipeline data</div>
-        </CardContent>
-      </Card>
+      <AnalyticsCard title="Pipeline" subtitle="Deal stages">
+        <div className="text-destructive">Error loading pipeline data</div>
+      </AnalyticsCard>
     );
   }
 
@@ -208,136 +197,73 @@ export function PipelineWidget() {
     (d) => !["closed", "lost"].includes(d.stage)
   );
 
+  const stageData = [
+    { stage: 'Discovery', count: pipeline.counts.discovery || 0, color: 'from-blue-500 to-blue-600' },
+    { stage: 'Proposal', count: pipeline.counts.proposal || 0, color: 'from-yellow-500 to-yellow-600' },
+    { stage: 'Negotiation', count: pipeline.counts.negotiation || 0, color: 'from-orange-500 to-orange-600' },
+    { stage: 'Closed', count: pipeline.counts.closed || 0, color: 'from-green-500 to-green-600' },
+  ];
+  const totalDeals = activeDeals.length || 1;
+
   return (
     <>
-      <Card className="relative overflow-hidden bg-gradient-to-br from-slate-900/80 via-slate-900/60 to-slate-800/40 backdrop-blur-xl border border-white/10 shadow-[0_0_30px_rgba(0,0,0,0.45)] hover:shadow-[0_0_40px_rgba(147,51,234,0.15)] hover:border-purple-500/20 transition-all duration-300 group">
-          <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-cyan-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-          <div className="relative z-10">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <Target className="h-5 w-5" />
-              Pipeline
-            </CardTitle>
-            <Button
-              size="sm"
-              onClick={() => setShowAddModal(true)}
-              className="gap-2 bg-purple-600 hover:bg-purple-500 text-white font-semibold shadow-[0_0_20px_rgba(139,92,246,0.3)] hover:shadow-[0_0_30px_rgba(139,92,246,0.5)] border-0 transition-all duration-200"
-            >
-              <Plus className="h-4 w-4" />
-              Add Deal
-            </Button>
+      <AnalyticsCard 
+        title="Pipeline" 
+        subtitle="Deal stages"
+      >
+        {/* Top metrics */}
+        <div className="grid grid-cols-2 gap-4 mb-6">
+          <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+            <p className="text-xs text-slate-400 uppercase tracking-wide mb-2">Pipeline Value</p>
+            <p className="text-3xl font-bold font-mono text-white">
+              $<AnimatedNumber value={pipeline.totalValue} decimals={0} />
+            </p>
           </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Total Pipeline Value */}
-          <div className="flex items-center justify-between p-4 rounded-lg bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border border-blue-500/20">
-            <div>
-              <p className="text-sm text-muted-foreground mb-1">Pipeline Value</p>
-              <p className="text-5xl font-bold font-mono mb-2 text-slate-100 hover:bg-gradient-to-r hover:from-cyan-300/80 hover:to-purple-300/80 hover:bg-clip-text hover:text-transparent transition-all duration-300">
-                $<AnimatedNumber value={pipeline.totalValue} decimals={0} />
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                {activeDeals.length} active deals
-              </p>
-            </div>
-            <div className="p-3 rounded-lg bg-blue-500/20">
-              <TrendingUp className="h-6 w-6 text-blue-400" />
-            </div>
+          <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+            <p className="text-xs text-slate-400 uppercase tracking-wide mb-2">Active Deals</p>
+            <p className="text-3xl font-bold font-mono text-white">{activeDeals.length}</p>
           </div>
+        </div>
 
-          {/* Stage Counts */}
-          <div className="grid grid-cols-2 gap-2">
-            {Object.entries(pipeline.counts).map(([stage, count]) => {
-              if (stage === "lost") return null;
-              return (
-                <div
-                  key={stage}
-                  className={`p-3 rounded-lg border ${stageColors[stage] || "border-border"}`}
-                >
-                  <p className="text-xs text-muted-foreground mb-1">
-                    {stageLabels[stage]}
-                  </p>
-                  <p className="text-2xl font-bold">{count}</p>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Recent Deals */}
-          {pipeline.deals.length > 0 && (
-            <div>
-              <p className="text-sm font-medium mb-2">Recent Deals</p>
-              <div className="space-y-2 max-h-64 overflow-y-auto">
-                {pipeline.deals.slice(0, 5).map((deal) => (
-                  <div
-                    key={deal.id}
-                    className="group flex items-start justify-between p-3 rounded border border-border hover:bg-secondary/50 transition-colors"
-                  >
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <p className="font-medium">
-                          {deal.client_name || "Unnamed Client"}
-                        </p>
-                        <Badge
-                          variant="outline"
-                          className={`text-xs ${stageColors[deal.stage] || ""}`}
-                        >
-                          {stageLabels[deal.stage] || deal.stage}
-                        </Badge>
-                      </div>
-                      {deal.deal_value && (
-                        <p className="text-sm font-semibold text-primary">
-                          ${deal.deal_value.toLocaleString()}
-                        </p>
-                      )}
-                      {deal.notes && (
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {deal.notes}
-                        </p>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => setEditingDeal(deal)}
-                        className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 hover:opacity-100"
-                      >
-                        <Edit2 className="h-3 w-3" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => setDeleteId(deal.id)}
-                        className="h-7 w-7 p-0 text-red-500 hover:text-red-700 opacity-0 group-hover:opacity-100 hover:opacity-100"
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
+        {/* Horizontal stage bars */}
+        <div className="space-y-3 mb-6">
+          {stageData.map(({ stage, count, color }) => (
+            <div key={stage}>
+              <div className="flex justify-between text-sm mb-1">
+                <span className="text-slate-300">{stage}</span>
+                <span className="text-white font-semibold">{count}</span>
+              </div>
+              <div className="h-2 bg-white/5 rounded-full overflow-hidden">
+                <div 
+                  className={`h-full bg-gradient-to-r ${color} transition-all duration-300`}
+                  style={{ width: `${(count / totalDeals) * 100}%` }}
+                />
               </div>
             </div>
-          )}
+          ))}
+        </div>
 
-          {pipeline.deals.length === 0 && (
-            <div className="text-center py-8 text-muted-foreground">
-              <Target className="h-12 w-12 mx-auto mb-2 opacity-50" />
-              <p>No deals in pipeline yet</p>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowAddModal(true)}
-                className="mt-4"
-              >
-                Add Your First Deal
-              </Button>
-            </div>
-          )}
-        </CardContent>
+        {/* Empty state or CTA */}
+        {activeDeals.length === 0 ? (
+          <div className="text-center py-8 border border-white/10 rounded-xl bg-white/5">
+            <Target className="w-12 h-12 text-slate-600 mx-auto mb-4" />
+            <p className="text-slate-400 mb-4">No deals in pipeline yet</p>
+            <Button 
+              onClick={() => setShowAddModal(true)}
+              className="bg-gradient-to-r from-purple-600 to-cyan-500 hover:from-purple-500 hover:to-cyan-400 text-white"
+            >
+              + Add Deal
+            </Button>
           </div>
-      </Card>
+        ) : (
+          <Button 
+            onClick={() => setShowAddModal(true)}
+            className="w-full bg-gradient-to-r from-purple-600 to-cyan-500 hover:from-purple-500 hover:to-cyan-400 text-white"
+          >
+            + Add Deal
+          </Button>
+        )}
+      </AnalyticsCard>
 
       {showAddModal && (
         <QuickAddModal

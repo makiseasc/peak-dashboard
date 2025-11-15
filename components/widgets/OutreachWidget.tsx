@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { AnalyticsCard } from "@/components/ui/AnalyticsCard";
+import { OutreachDonut } from "@/components/charts/OutreachDonut";
 import { Badge } from "@/components/ui/badge";
 import {
   AlertDialog,
@@ -153,33 +155,21 @@ export function OutreachWidget() {
 
   if (isLoading) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Outreach</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
+      <AnalyticsCard title="Outreach" subtitle="Last 30 days">
+        <div className="space-y-4">
           <Skeleton className="h-8 w-32" />
           <Skeleton className="h-4 w-full" />
           <Skeleton className="h-4 w-3/4" />
-          <div className="space-y-2">
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-5/6" />
-          </div>
-        </CardContent>
-      </Card>
+        </div>
+      </AnalyticsCard>
     );
   }
 
   if (error) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Outreach</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-destructive">Error loading outreach data</div>
-        </CardContent>
-      </Card>
+      <AnalyticsCard title="Outreach" subtitle="Last 30 days">
+        <div className="text-destructive">Error loading outreach data</div>
+      </AnalyticsCard>
     );
   }
 
@@ -191,168 +181,66 @@ export function OutreachWidget() {
     byPlatform: {},
   };
 
+  const sent = outreach.totals.sent || 0;
+  const replies = outreach.totals.replies || 0;
+  const positive = outreach.totals.positives || 0;
+  const responseRate = outreach.responseRate || 0;
+
   return (
     <>
-      <Card className="relative overflow-hidden bg-gradient-to-br from-slate-900/80 via-slate-900/60 to-slate-800/40 backdrop-blur-xl border border-white/10 shadow-[0_0_30px_rgba(0,0,0,0.45)] hover:shadow-[0_0_40px_rgba(147,51,234,0.15)] hover:border-purple-500/20 transition-all duration-300 group">
-          <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-cyan-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-          <div className="relative z-10">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <MessageSquare className="h-5 w-5" />
-              Outreach
-            </CardTitle>
-            <Button
-              size="sm"
-              onClick={() => setShowAddModal(true)}
-              className="gap-2 bg-purple-600 hover:bg-purple-500 text-white font-semibold shadow-[0_0_20px_rgba(139,92,246,0.3)] hover:shadow-[0_0_30px_rgba(139,92,246,0.5)] border-0 transition-all duration-200"
-            >
-              <Plus className="h-4 w-4" />
-              Add Entry
-            </Button>
+      <AnalyticsCard 
+        title="Outreach" 
+        subtitle="Last 30 days"
+      >
+        {/* Response rate metric */}
+        <div className="bg-white/5 border border-white/10 rounded-xl p-4 mb-6">
+          <p className="text-xs text-slate-400 uppercase tracking-wide mb-2">Response Rate</p>
+          <p className="text-4xl font-bold font-mono text-white">{responseRate}%</p>
+        </div>
+
+        {/* Stats grid */}
+        <div className="grid grid-cols-3 gap-4 mb-6">
+          <div className="text-center bg-white/5 border border-white/10 rounded-xl p-3">
+            <p className="text-2xl font-bold font-mono text-white">{sent}</p>
+            <p className="text-xs text-slate-400 uppercase mt-1">Sent</p>
           </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Response Rate */}
-          <div className="flex items-center justify-between p-4 rounded-lg bg-gradient-to-br from-cyan-500/10 to-blue-500/10 border border-blue-500/20">
-            <div>
-              <p className="text-sm text-muted-foreground mb-1">Response Rate</p>
-              <p className="text-3xl font-bold">{outreach.responseRate}%</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Last {days} days
-              </p>
-            </div>
-            <div className="p-3 rounded-lg bg-blue-500/20">
-              <TrendingUp className="h-6 w-6 text-blue-400" />
-            </div>
+          <div className="text-center bg-white/5 border border-white/10 rounded-xl p-3">
+            <p className="text-2xl font-bold font-mono text-white">{replies}</p>
+            <p className="text-xs text-slate-400 uppercase mt-1">Replies</p>
           </div>
-
-          {/* Totals */}
-          <div className="grid grid-cols-3 gap-2">
-            <div className="p-3 rounded-lg border border-border text-center">
-              <p className="text-xs text-muted-foreground mb-1">Sent</p>
-              <p className="text-xl font-semibold">{outreach.totals.sent}</p>
-            </div>
-            <div className="p-3 rounded-lg border border-border text-center">
-              <p className="text-xs text-muted-foreground mb-1">Replies</p>
-              <p className="text-xl font-semibold">{outreach.totals.replies}</p>
-            </div>
-            <div className="p-3 rounded-lg border border-border text-center">
-              <p className="text-xs text-muted-foreground mb-1">Positive</p>
-              <p className="text-xl font-semibold text-green-400">
-                {outreach.totals.positives}
-              </p>
-            </div>
+          <div className="text-center bg-white/5 border border-white/10 rounded-xl p-3">
+            <p className="text-2xl font-bold font-mono text-cyan-400">{positive}</p>
+            <p className="text-xs text-slate-400 uppercase mt-1">Positive</p>
           </div>
+        </div>
 
-          {/* Positive Rate */}
-          {outreach.totals.replies > 0 && (
-            <div className="p-3 rounded-lg border border-border">
-              <p className="text-xs text-muted-foreground mb-1">Positive Reply Rate</p>
-              <p className="text-lg font-semibold text-green-400">
-                {outreach.positiveRate}%
-              </p>
-            </div>
-          )}
-
-          {/* By Platform */}
-          {Object.keys(outreach.byPlatform).length > 0 && (
-            <div>
-              <p className="text-sm font-medium mb-2">By Platform</p>
-              <div className="space-y-2">
-                {Object.entries(outreach.byPlatform).map(([platform, stats]: [string, any]) => (
-                  <div
-                    key={platform}
-                    className="flex items-center justify-between p-2 rounded border border-border"
-                  >
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="capitalize">
-                        {platform}
-                      </Badge>
-                      <span className="text-xs text-muted-foreground">
-                        {stats.sent} sent
-                      </span>
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {stats.replies} replies ({stats.positives} +)
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Recent Entries */}
-          {outreach.outreach.length > 0 && (
-            <div>
-              <p className="text-sm font-medium mb-2">Recent Entries</p>
-              <div className="space-y-2 max-h-48 overflow-y-auto">
-                {outreach.outreach.slice(0, 5).map((entry) => (
-                  <div
-                    key={entry.id}
-                    className="group flex items-center justify-between p-2 rounded border border-border text-sm hover:bg-secondary/50 transition-colors"
-                  >
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <Badge variant="outline" className="text-xs capitalize">
-                          {entry.platform}
-                        </Badge>
-                        {entry.campaign_name && (
-                          <span className="text-xs text-muted-foreground">
-                            {entry.campaign_name}
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        {entry.messages_sent} sent • {entry.replies} replies
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {entry.positive_replies > 0 && (
-                        <Badge variant="outline" className="text-xs text-green-400">
-                          +{entry.positive_replies}
-                        </Badge>
-                      )}
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => setEditingEntry(entry)}
-                        className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 hover:opacity-100"
-                      >
-                        <Edit2 className="h-3 w-3" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => setDeleteId(entry.id)}
-                        className="h-7 w-7 p-0 text-red-500 hover:text-red-700 opacity-0 group-hover:opacity-100 hover:opacity-100"
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {outreach.outreach.length === 0 && (
-            <div className="text-center py-8 text-muted-foreground">
-              <MessageSquare className="h-12 w-12 mx-auto mb-2 opacity-50" />
-              <p>No outreach entries yet</p>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowAddModal(true)}
-                className="mt-4"
-              >
-                Add Your First Entry
-              </Button>
-            </div>
-          )}
-        </CardContent>
+        {/* Donut chart or empty state */}
+        {sent > 0 ? (
+          <div className="h-48 mb-6">
+            <OutreachDonut 
+              data={{
+                positive,
+                neutral: replies - positive,
+                noResponse: sent - replies,
+                responseRate
+              }}
+            />
           </div>
-      </Card>
+        ) : (
+          <div className="text-center py-8 border border-white/10 rounded-xl bg-white/5 mb-6">
+            <MessageSquare className="w-12 h-12 text-slate-600 mx-auto mb-4" />
+            <p className="text-slate-400">No outreach entries yet</p>
+          </div>
+        )}
+
+        {/* Add button */}
+        <Button 
+          onClick={() => setShowAddModal(true)}
+          className="w-full bg-gradient-to-r from-purple-600 to-cyan-500 hover:from-purple-500 hover:to-cyan-400 text-white font-semibold"
+        >
+          + Add Entry
+        </Button>
+      </AnalyticsCard>
 
       {showAddModal && (
         <QuickAddModal

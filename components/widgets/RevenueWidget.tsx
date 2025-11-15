@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { AnalyticsCard } from "@/components/ui/AnalyticsCard";
+import { LineChart, Line, ResponsiveContainer } from 'recharts';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -174,232 +176,93 @@ export function RevenueWidget() {
 
   if (isLoading) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Revenue</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
+      <AnalyticsCard title="Revenue" subtitle="Last 30 days">
+        <div className="space-y-4">
           <Skeleton className="h-8 w-32" />
           <Skeleton className="h-4 w-full" />
           <Skeleton className="h-4 w-3/4" />
-          <div className="space-y-2">
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-5/6" />
-          </div>
-        </CardContent>
-      </Card>
+        </div>
+      </AnalyticsCard>
     );
   }
 
   if (error) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Revenue</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-destructive">Error loading revenue data</div>
-        </CardContent>
-      </Card>
+      <AnalyticsCard title="Revenue" subtitle="Last 30 days">
+        <div className="text-destructive">Error loading revenue data</div>
+      </AnalyticsCard>
     );
   }
 
   const revenue = data || { revenue: [], total: 0, dailyAverage: 0, bySource: {} };
+  
+  // Prepare data for mini sparkline
+  const sparklineData = revenue.revenue
+    .slice(-7)
+    .map(entry => ({ date: new Date(entry.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), amount: entry.amount }));
 
   return (
     <>
-      <Card className="relative overflow-hidden bg-gradient-to-br from-slate-900/80 via-slate-900/60 to-slate-800/40 backdrop-blur-xl border border-white/10 shadow-[0_0_30px_rgba(0,0,0,0.45)] hover:shadow-[0_0_40px_rgba(147,51,234,0.15)] hover:border-purple-500/20 transition-all duration-300 group">
-          <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-cyan-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-          <div className="relative z-10">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <DollarSign className="h-5 w-5" />
-              Revenue
-            </CardTitle>
-            <Button
-              size="sm"
+      <AnalyticsCard 
+        title="Revenue" 
+        subtitle="Last 30 days"
+      >
+        {/* Top metrics - matching MetricTile style */}
+        <div className="grid grid-cols-2 gap-4 mb-6">
+          <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+            <p className="text-xs text-slate-400 uppercase tracking-wide mb-2">Total Revenue</p>
+            <p className="text-3xl font-bold font-mono text-white">
+              $<AnimatedNumber value={revenue.total} decimals={0} />
+            </p>
+          </div>
+          <div className="bg-white/5 border border-white/10 rounded-xl p-4">
+            <p className="text-xs text-slate-400 uppercase tracking-wide mb-2">Daily Average</p>
+            <p className="text-3xl font-bold font-mono text-white">${revenue.dailyAverage.toFixed(2)}</p>
+          </div>
+        </div>
+
+        {/* Mini sparkline chart */}
+        {sparklineData.length > 0 && (
+          <div className="h-24 mb-6">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={sparklineData}>
+                <Line 
+                  type="monotone" 
+                  dataKey="amount" 
+                  stroke="#8B5CF6" 
+                  strokeWidth={2}
+                  dot={false}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+
+        {/* Entries count or empty state */}
+        {revenue.revenue.length === 0 ? (
+          <div className="text-center py-8 border border-white/10 rounded-xl bg-white/5">
+            <DollarSign className="w-12 h-12 text-slate-600 mx-auto mb-4" />
+            <p className="text-slate-400 mb-4">No revenue entries yet</p>
+            <Button 
               onClick={() => setShowAddModal(true)}
-              className="gap-2 bg-purple-600 hover:bg-purple-500 text-white font-semibold shadow-[0_0_20px_rgba(139,92,246,0.3)] hover:shadow-[0_0_30px_rgba(139,92,246,0.5)] border-0 transition-all duration-200"
+              className="bg-gradient-to-r from-purple-600 to-cyan-500 hover:from-purple-500 hover:to-cyan-400 text-white"
             >
-              <Plus className="h-4 w-4" />
-              Add Entry
+              + Add Entry
             </Button>
           </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Total Revenue */}
-          <div className="flex items-center justify-between p-4 rounded-lg bg-gradient-to-br from-purple-500/10 to-indigo-500/10 border border-purple-500/20">
-            <div>
-              <p className="text-sm text-muted-foreground mb-1">Total Revenue</p>
-              <p className="text-5xl font-bold font-mono mb-2 text-slate-100 hover:bg-gradient-to-r hover:from-purple-300/80 hover:to-cyan-300/80 hover:bg-clip-text hover:text-transparent transition-all duration-300">
-                $<AnimatedNumber value={revenue.total} decimals={0} />
-              </p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Last {days} days
-              </p>
-            </div>
-            <div className="p-3 rounded-lg bg-purple-500/20">
-              <DollarSign className="h-6 w-6 text-purple-400" />
-            </div>
+        ) : (
+          <div className="flex justify-between items-center">
+            <p className="text-slate-300">{revenue.revenue.length} entries</p>
+            <Button 
+              onClick={() => setShowAddModal(true)}
+              className="bg-gradient-to-r from-purple-600 to-cyan-500 hover:from-purple-500 hover:to-cyan-400 text-white"
+            >
+              + Add Entry
+            </Button>
           </div>
+        )}
 
-          {/* Daily Average */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="p-3 rounded-lg border border-border">
-              <p className="text-xs text-muted-foreground mb-1">Daily Average</p>
-              <p className="text-xl font-semibold">${revenue.dailyAverage.toFixed(2)}</p>
-            </div>
-            <div className="p-3 rounded-lg border border-border">
-              <p className="text-xs text-muted-foreground mb-1">Entries</p>
-              <p className="text-xl font-semibold">{revenue.revenue.length}</p>
-            </div>
-          </div>
-
-          {/* By Source */}
-          {Object.keys(revenue.bySource).length > 0 && (
-            <div>
-              <p className="text-sm font-medium mb-2">By Source</p>
-              <div className="space-y-2">
-                {Object.entries(revenue.bySource).map(([source, amount]) => (
-                  <div
-                    key={source}
-                    className="flex items-center justify-between p-2 rounded border border-border"
-                  >
-                    <span className="text-sm capitalize">{source}</span>
-                    <span className="text-sm font-semibold">
-                      ${amount.toLocaleString()}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Recent Entries */}
-          {revenue.revenue.length > 0 && (
-            <div>
-              <p className="text-sm font-medium mb-2">Recent Entries</p>
-              <div className="space-y-2 max-h-48 overflow-y-auto">
-                {revenue.revenue.slice(0, 5).map((entry) => (
-                  <div
-                    key={entry.id}
-                    className="group flex items-center justify-between p-2 rounded border border-border text-sm hover:bg-secondary/50 transition-colors"
-                  >
-                    <div className="flex-1">
-                      <p className="font-medium capitalize">{entry.source}</p>
-                      {entry.description && (
-                        <p className="text-xs text-muted-foreground">
-                          {entry.description}
-                        </p>
-                      )}
-                      <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
-                        <Calendar className="h-3 w-3" />
-                        {new Date(entry.date).toLocaleDateString()}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <p className="font-semibold">${entry.amount.toLocaleString()}</p>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => setEditingEntry(entry)}
-                        className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 hover:opacity-100"
-                      >
-                        <Edit2 className="h-3 w-3" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => setDeleteId(entry.id)}
-                        className="h-7 w-7 p-0 text-red-500 hover:text-red-700 opacity-0 group-hover:opacity-100 hover:opacity-100"
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {revenue.revenue.length === 0 && (
-            <div className="text-center py-8 text-muted-foreground">
-              <DollarSign className="h-12 w-12 mx-auto mb-2 opacity-50" />
-              <p>No revenue entries yet</p>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowAddModal(true)}
-                className="mt-4"
-              >
-                Add Your First Entry
-              </Button>
-            </div>
-          )}
-
-          {/* Proof Post Generator */}
-          {revenue.total > 0 && (
-            <div className="mt-4 pt-4 border-t border-border">
-              <p className="text-sm font-medium mb-2">Generate Proof Post</p>
-              <div className="flex gap-2">
-                <Button
-                  onClick={() => generateProof('twitter')}
-                  disabled={generatingProof}
-                  size="sm"
-                  className="bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-xs flex-1"
-                >
-                  {generatingProof ? (
-                    <>
-                      <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                      Generating...
-                    </>
-                  ) : (
-                    <>
-                      🐦 Twitter Proof
-                    </>
-                  )}
-                </Button>
-                <Button
-                  onClick={() => generateProof('linkedin')}
-                  disabled={generatingProof}
-                  size="sm"
-                  className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-xs flex-1"
-                >
-                  {generatingProof ? (
-                    <>
-                      <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                      Generating...
-                    </>
-                  ) : (
-                    <>
-                      💼 LinkedIn Proof
-                    </>
-                  )}
-                </Button>
-              </div>
-
-              {showProof && proofPost && (
-                <div className="mt-4 p-4 bg-gradient-to-br from-slate-950/50 to-slate-900/50 rounded-lg border border-purple-500/20">
-                  <p className="text-sm text-slate-300 mb-3 whitespace-pre-wrap leading-relaxed">
-                    {proofPost}
-                  </p>
-                  <Button
-                    onClick={copyToClipboard}
-                    size="sm"
-                    variant="outline"
-                    className="w-full text-xs"
-                  >
-                    <Copy className="h-3 w-3 mr-2" />
-                    Copy to Clipboard
-                  </Button>
-                </div>
-              )}
-            </div>
-          )}
-        </CardContent>
-          </div>
-      </Card>
+      </AnalyticsCard>
 
       {showAddModal && (
         <QuickAddModal

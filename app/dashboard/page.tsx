@@ -7,6 +7,12 @@ import { MetricTile } from "@/components/ui/MetricTile";
 import { RevenueLineChart } from "@/components/charts/RevenueLineChart";
 import { PipelineFunnel } from "@/components/charts/PipelineFunnel";
 import { XPLineChart } from "@/components/charts/XPLineChart";
+import { OutreachDonut } from "@/components/charts/OutreachDonut";
+import { SentimentPie } from "@/components/charts/SentimentPie";
+import { ProductivityGauge } from "@/components/charts/ProductivityGauge";
+import { TimelineFeed } from "@/components/cards/TimelineFeed";
+import { DealFlowTimeline } from "@/components/cards/DealFlowTimeline";
+import { HLAHeatmap } from "@/components/cards/HLAHeatmap";
 import { DollarSign, TrendingUp, Zap, Target } from "lucide-react";
 import { RevenueWidget } from "@/components/widgets/RevenueWidget";
 import { PipelineWidget } from "@/components/widgets/PipelineWidget";
@@ -33,6 +39,44 @@ export default function DashboardPage() {
     { date: 'Tue', xp: 30 },
     { date: 'Wed', xp: 30 },
   ];
+
+  // Row 2: Advanced Analytics Data
+  const outreachData = {
+    positive: 5,
+    neutral: 10,
+    noResponse: 85,
+    responseRate: 15,
+  };
+
+  const sentimentData = [
+    { name: 'Positive', value: 25 },
+    { name: 'Neutral', value: 50 },
+    { name: 'Negative', value: 15 },
+    { name: 'No Response', value: 10 },
+  ];
+
+  const productivityScore = 75; // 0-100
+
+  // Row 3: Timeline & Heatmap Data
+  const recentActivities = [
+    { id: '1', type: 'hla' as const, description: 'Completed daily HLA: Content creation', timestamp: new Date().toISOString() },
+    { id: '2', type: 'revenue' as const, description: 'Added revenue entry: $500', timestamp: new Date(Date.now() - 3600000).toISOString() },
+    { id: '3', type: 'deal' as const, description: 'Added deal: Client ABC', timestamp: new Date(Date.now() - 7200000).toISOString() },
+  ];
+
+  const activeDeals = [
+    { id: '1', client_name: 'Client ABC', stage: 'Proposal', date: new Date().toISOString() },
+    { id: '2', client_name: 'Client XYZ', stage: 'Negotiation', date: new Date().toISOString() },
+  ];
+
+  const hlaHistory = Array.from({ length: 28 }, (_, i) => {
+    const date = new Date();
+    date.setDate(date.getDate() - (27 - i));
+    return {
+      date: date.toISOString().split('T')[0],
+      count: Math.floor(Math.random() * 5),
+    };
+  });
 
   return (
     <AuthGuard>
@@ -77,7 +121,7 @@ export default function DashboardPage() {
                 <MetricTile label="Messages Sent" value="0" icon={<TrendingUp className="w-5 h-5" />} />
               </div>
 
-              {/* Main Analytics Grid */}
+              {/* Row 1: Main Analytics Grid */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
                 {/* Revenue Analytics */}
                 <AnalyticsCard title="Revenue" subtitle="Last 30 days">
@@ -95,7 +139,37 @@ export default function DashboardPage() {
                 </AnalyticsCard>
               </div>
 
-              {/* Existing Widgets Grid */}
+              {/* Row 2: Advanced Analytics */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                <AnalyticsCard title="Outreach Performance" subtitle="Response metrics">
+                  <OutreachDonut data={outreachData} />
+                </AnalyticsCard>
+
+                <AnalyticsCard title="Sentiment Analysis" subtitle="Reply breakdown">
+                  <SentimentPie data={sentimentData} />
+                </AnalyticsCard>
+
+                <AnalyticsCard title="Productivity Score" subtitle="Your execution rating">
+                  <ProductivityGauge score={productivityScore} />
+                </AnalyticsCard>
+              </div>
+
+              {/* Row 3: Timelines & Heatmaps */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                <AnalyticsCard title="Activity Feed" subtitle="Recent operations">
+                  <TimelineFeed activities={recentActivities} />
+                </AnalyticsCard>
+
+                <AnalyticsCard title="Deal Flow" subtitle="Pipeline progression">
+                  <DealFlowTimeline deals={activeDeals} />
+                </AnalyticsCard>
+
+                <AnalyticsCard title="Execution Heatmap" subtitle="28-day activity">
+                  <HLAHeatmap data={hlaHistory} />
+                </AnalyticsCard>
+              </div>
+
+              {/* Row 4: Existing Widgets Grid */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <RevenueWidget />
                 <PipelineWidget />
