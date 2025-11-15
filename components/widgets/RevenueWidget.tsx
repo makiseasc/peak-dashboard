@@ -208,7 +208,7 @@ export function RevenueWidget() {
 
   return (
     <>
-      <Card className="relative overflow-hidden bg-gradient-to-br from-slate-900/80 via-slate-900/60 to-slate-800/40 backdrop-blur-xl border border-slate-700/50 shadow-[0_0_50px_rgba(139,92,246,0.1),0_8px_32px_rgba(0,0,0,0.3)] hover:shadow-[0_0_60px_rgba(139,92,246,0.2),0_8px_40px_rgba(0,0,0,0.4)] hover:border-purple-500/30 transition-all duration-300 group">
+      <Card className="relative overflow-hidden bg-gradient-to-br from-slate-900/80 via-slate-900/60 to-slate-800/40 backdrop-blur-xl border border-slate-700/50 shadow-[0_0_30px_rgba(139,92,246,0.08),0_8px_32px_rgba(0,0,0,0.3)] hover:shadow-[0_0_40px_rgba(139,92,246,0.12),0_8px_40px_rgba(0,0,0,0.4)] hover:border-purple-500/30 transition-all duration-300 group">
           <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-cyan-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
           <div className="relative z-10">
         <CardHeader>
@@ -220,13 +220,10 @@ export function RevenueWidget() {
             <Button
               size="sm"
               onClick={() => setShowAddModal(true)}
-              className="gap-2 relative overflow-hidden bg-gradient-to-r from-purple-500 via-indigo-500 to-cyan-500 hover:from-purple-600 hover:via-indigo-600 hover:to-cyan-600 text-white font-semibold shadow-[0_0_20px_rgba(139,92,246,0.4)] hover:shadow-[0_0_30px_rgba(139,92,246,0.6)] border-0"
+              className="gap-2 bg-purple-600 hover:bg-purple-500 text-white font-semibold shadow-[0_0_20px_rgba(139,92,246,0.3)] hover:shadow-[0_0_30px_rgba(139,92,246,0.5)] border-0 transition-all duration-200"
             >
-              <span className="relative z-10 flex items-center gap-2">
-                <Plus className="h-4 w-4" />
-                Add Entry
-              </span>
-              <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-cyan-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              <Plus className="h-4 w-4" />
+              Add Entry
             </Button>
           </div>
         </CardHeader>
@@ -235,7 +232,7 @@ export function RevenueWidget() {
           <div className="flex items-center justify-between p-4 rounded-lg bg-gradient-to-br from-purple-500/10 to-indigo-500/10 border border-purple-500/20">
             <div>
               <p className="text-sm text-muted-foreground mb-1">Total Revenue</p>
-              <p className="text-5xl font-bold font-mono mb-2 bg-gradient-to-r from-purple-400 via-indigo-400 to-cyan-400 bg-clip-text text-transparent animate-shimmer">
+              <p className="text-5xl font-bold font-mono mb-2 text-slate-100 hover:bg-gradient-to-r hover:from-purple-300/80 hover:to-cyan-300/80 hover:bg-clip-text hover:text-transparent transition-all duration-300">
                 $<AnimatedNumber value={revenue.total} decimals={0} />
               </p>
               <p className="text-xs text-muted-foreground mt-1">
