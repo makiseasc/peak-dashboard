@@ -4,7 +4,17 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, MessageSquare, Reply, TrendingUp, Mail } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Plus, MessageSquare, Reply, TrendingUp, Mail, Edit2, Trash2 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { QuickAddModal } from "./QuickAddModal";
@@ -39,6 +49,8 @@ async function fetchOutreach(days: number = 30): Promise<OutreachData> {
 
 export function OutreachWidget() {
   const [showAddModal, setShowAddModal] = useState(false);
+  const [editingEntry, setEditingEntry] = useState<OutreachEntry | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const [days, setDays] = useState(30);
   const queryClient = useQueryClient();
 
@@ -79,6 +91,62 @@ export function OutreachWidget() {
     onError: (error: Error) => {
       console.error("Outreach add error:", error);
       toast.error(error.message || "Failed to add outreach");
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async (entry: {
+      id: string;
+      date?: string;
+      platform?: string;
+      messages_sent?: number;
+      replies?: number;
+      positive_replies?: number;
+      campaign_name?: string;
+    }) => {
+      const res = await fetch("/api/outreach", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(entry),
+      });
+      
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        const errorMessage = errorData.error || `Failed to update outreach (${res.status})`;
+        throw new Error(errorMessage);
+      }
+      
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["outreach"] });
+      toast.success("Outreach entry updated! ✏️");
+      setEditingEntry(null);
+    },
+    onError: (error: Error) => {
+      console.error("Outreach update error:", error);
+      toast.error(error.message || "Failed to update outreach");
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/outreach?id=${id}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to delete outreach");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["outreach"] });
+      toast.success("Outreach entry deleted! 🗑️");
+      setDeleteId(null);
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to delete outreach");
     },
   });
 
@@ -213,7 +281,7 @@ export function OutreachWidget() {
                 {outreach.outreach.slice(0, 5).map((entry) => (
                   <div
                     key={entry.id}
-                    className="flex items-center justify-between p-2 rounded border border-border text-sm"
+                    className="group flex items-center justify-between p-2 rounded border border-border text-sm hover:bg-secondary/50 transition-colors"
                   >
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
@@ -230,11 +298,29 @@ export function OutreachWidget() {
                         {entry.messages_sent} sent • {entry.replies} replies
                       </p>
                     </div>
-                    {entry.positive_replies > 0 && (
-                      <Badge variant="outline" className="text-xs text-green-400">
-                        +{entry.positive_replies}
-                      </Badge>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {entry.positive_replies > 0 && (
+                        <Badge variant="outline" className="text-xs text-green-400">
+                          +{entry.positive_replies}
+                        </Badge>
+                      )}
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setEditingEntry(entry)}
+                        className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 hover:opacity-100"
+                      >
+                        <Edit2 className="h-3 w-3" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setDeleteId(entry.id)}
+                        className="h-7 w-7 p-0 text-red-500 hover:text-red-700 opacity-0 group-hover:opacity-100 hover:opacity-100"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -278,6 +364,72 @@ export function OutreachWidget() {
           }}
         />
       )}
+
+      {editingEntry && (
+        <QuickAddModal
+          type="outreach"
+          onClose={() => setEditingEntry(null)}
+          onSubmit={(data) => {
+            const updatePayload: any = {
+              id: editingEntry.id,
+            };
+            
+            if (data.date) {
+              updatePayload.date = data.date;
+            }
+            
+            if (data.platform) {
+              updatePayload.platform = data.platform;
+            }
+            
+            if (data.messages_sent !== undefined && data.messages_sent.trim()) {
+              updatePayload.messages_sent = parseInt(data.messages_sent);
+            }
+            
+            if (data.replies !== undefined && data.replies.trim()) {
+              updatePayload.replies = parseInt(data.replies);
+            }
+            
+            if (data.positive_replies !== undefined && data.positive_replies.trim()) {
+              updatePayload.positive_replies = parseInt(data.positive_replies);
+            }
+            
+            if (data.campaign_name !== undefined) {
+              updatePayload.campaign_name = data.campaign_name?.trim() || null;
+            }
+            
+            updateMutation.mutate(updatePayload);
+          }}
+          initialData={{
+            date: editingEntry.date,
+            platform: editingEntry.platform,
+            messages_sent: String(editingEntry.messages_sent || 0),
+            replies: String(editingEntry.replies || 0),
+            positive_replies: String(editingEntry.positive_replies || 0),
+            campaign_name: editingEntry.campaign_name || "",
+          }}
+        />
+      )}
+
+      <AlertDialog open={deleteId !== null} onOpenChange={(open) => !open && setDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Outreach Entry?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete this outreach entry.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deleteId && deleteMutation.mutate(deleteId)}
+              className="bg-red-500 hover:bg-red-600"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

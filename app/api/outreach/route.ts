@@ -162,3 +162,150 @@ export async function POST(request: NextRequest) {
   }
 }
 
+// PUT - Update outreach entry
+export async function PUT(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { id, date, platform, messages_sent, replies, positive_replies, campaign_name } = body;
+
+    if (!id) {
+      return NextResponse.json(
+        { error: 'Missing required field: id' },
+        { status: 400 }
+      );
+    }
+
+    if (!isSupabaseConfigured()) {
+      return NextResponse.json({
+        success: true,
+        message: 'Supabase not configured. Data not persisted.',
+      });
+    }
+
+    const updateData: any = {};
+    
+    if (date !== undefined) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+        return NextResponse.json(
+          { error: 'Invalid date format. Expected YYYY-MM-DD' },
+          { status: 400 }
+        );
+      }
+      updateData.date = date;
+    }
+    
+    if (platform !== undefined) {
+      updateData.platform = platform;
+    }
+    
+    if (messages_sent !== undefined) {
+      const sentNum = parseInt(String(messages_sent));
+      if (!isNaN(sentNum) && sentNum >= 0) {
+        updateData.messages_sent = sentNum;
+      }
+    }
+    
+    if (replies !== undefined) {
+      const repliesNum = parseInt(String(replies));
+      if (!isNaN(repliesNum) && repliesNum >= 0) {
+        updateData.replies = repliesNum;
+      }
+    }
+    
+    if (positive_replies !== undefined) {
+      const positivesNum = parseInt(String(positive_replies));
+      if (!isNaN(positivesNum) && positivesNum >= 0) {
+        updateData.positive_replies = positivesNum;
+      }
+    }
+    
+    if (campaign_name !== undefined) {
+      updateData.campaign_name = campaign_name?.trim() || null;
+    }
+
+    const { data, error } = await supabase!
+      .from('outreach')
+      .update(updateData)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Outreach PUT: Supabase error', {
+        error: error.message,
+        code: error.code,
+        details: error.details,
+      });
+      throw error;
+    }
+
+    return NextResponse.json({ success: true, data });
+  } catch (error: any) {
+    console.error('Error updating outreach:', error);
+    
+    let errorMessage = 'Failed to update outreach entry';
+    if (error.code === '42501') {
+      errorMessage = 'Permission denied. Check Supabase RLS policies.';
+    } else if (error.message) {
+      errorMessage = error.message;
+    }
+    
+    return NextResponse.json(
+      { error: errorMessage },
+      { status: 500 }
+    );
+  }
+}
+
+// DELETE - Remove outreach entry
+export async function DELETE(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+
+    if (!id) {
+      return NextResponse.json(
+        { error: 'Missing required field: id' },
+        { status: 400 }
+      );
+    }
+
+    if (!isSupabaseConfigured()) {
+      return NextResponse.json({
+        success: true,
+        message: 'Supabase not configured. Data not persisted.',
+      });
+    }
+
+    const { error } = await supabase!
+      .from('outreach')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Outreach DELETE: Supabase error', {
+        error: error.message,
+        code: error.code,
+        details: error.details,
+      });
+      throw error;
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    console.error('Error deleting outreach:', error);
+    
+    let errorMessage = 'Failed to delete outreach entry';
+    if (error.code === '42501') {
+      errorMessage = 'Permission denied. Check Supabase RLS policies.';
+    } else if (error.message) {
+      errorMessage = error.message;
+    }
+    
+    return NextResponse.json(
+      { error: errorMessage },
+      { status: 500 }
+    );
+  }
+}
+
