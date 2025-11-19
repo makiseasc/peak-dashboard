@@ -1,39 +1,57 @@
 "use client";
 
-import { Check } from "lucide-react";
+import { Check, Edit2 } from "lucide-react";
+import { Button } from "./button";
 
 interface CheckItemProps {
   text: string;
   completed: boolean;
   onToggle: () => void;
+  onEdit?: () => void;
 }
 
-export function CheckItem({ text, completed, onToggle }: CheckItemProps) {
+export function CheckItem({ text, completed, onToggle, onEdit }: CheckItemProps) {
   return (
     <div
       className="
-        flex items-center gap-3 p-3
+        group flex items-center gap-3 p-3
         bg-white/5 border border-white/10 rounded-xl
         hover:border-purple-500/30 hover:bg-white/10
-        transition-all cursor-pointer
+        transition-all
       "
-      onClick={onToggle}
     >
       <div
         className={`
           w-5 h-5 rounded border-2 flex items-center justify-center
           ${completed ? 'bg-purple-500 border-purple-500' : 'border-white/30'}
+          cursor-pointer
         `}
+        onClick={onToggle}
       >
         {completed && <Check className="w-3 h-3 text-white" />}
       </div>
       <span
         className={`
-          text-sm ${completed ? 'text-slate-400 line-through' : 'text-white'}
+          flex-1 text-sm ${completed ? 'text-slate-400 line-through' : 'text-white'}
+          cursor-pointer
         `}
+        onClick={onToggle}
       >
         {text}
       </span>
+      {onEdit && (
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={(e) => {
+            e.stopPropagation();
+            onEdit();
+          }}
+          className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 hover:opacity-100"
+        >
+          <Edit2 className="w-3 h-3" />
+        </Button>
+      )}
     </div>
   );
 }

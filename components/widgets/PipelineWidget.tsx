@@ -66,7 +66,11 @@ async function fetchPipeline(activeOnly: boolean = false): Promise<PipelineData>
   return res.json();
 }
 
-export function PipelineWidget() {
+interface PipelineWidgetProps {
+  onUpdate?: () => void;
+}
+
+export function PipelineWidget({ onUpdate }: PipelineWidgetProps = {}) {
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingDeal, setEditingDeal] = useState<PipelineDeal | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -104,6 +108,7 @@ export function PipelineWidget() {
       queryClient.invalidateQueries({ queryKey: ["pipeline"] });
       toast.success("Deal added to pipeline! 🎯");
       setShowAddModal(false);
+      onUpdate?.();
     },
     onError: (error: Error) => {
       console.error("Pipeline add error:", error);
@@ -138,6 +143,7 @@ export function PipelineWidget() {
       queryClient.invalidateQueries({ queryKey: ["pipeline"] });
       toast.success("Deal updated! ✏️");
       setEditingDeal(null);
+      onUpdate?.();
     },
     onError: (error: Error) => {
       console.error("Pipeline update error:", error);
@@ -160,6 +166,7 @@ export function PipelineWidget() {
       queryClient.invalidateQueries({ queryKey: ["pipeline"] });
       toast.success("Deal deleted! 🗑️");
       setDeleteId(null);
+      onUpdate?.();
     },
     onError: (error: Error) => {
       toast.error(error.message || "Failed to delete deal");
@@ -243,26 +250,57 @@ export function PipelineWidget() {
           ))}
         </div>
 
-        {/* Empty state or CTA */}
-        {activeDeals.length === 0 ? (
-          <div className="text-center py-8 border border-white/10 rounded-xl bg-white/5">
-            <Target className="w-12 h-12 text-slate-600 mx-auto mb-4" />
-            <p className="text-slate-400 mb-4">No deals in pipeline yet</p>
-            <Button 
-              onClick={() => setShowAddModal(true)}
-              className="bg-gradient-to-r from-purple-600 to-cyan-500 hover:from-purple-500 hover:to-cyan-400 text-white"
-            >
-              + Add Deal
-            </Button>
+        {/* Recent deals list */}
+        {pipeline.deals.length > 0 ? (
+          <div className="space-y-2 mb-6">
+            <p className="text-sm text-slate-400 mb-3">Recent Deals</p>
+            {pipeline.deals.slice(0, 5).map(deal => (
+              <div 
+                key={deal.id}
+                className="flex items-center justify-between p-3 bg-white/5 border border-white/10 rounded-lg group hover:bg-white/10 transition-colors"
+              >
+                <div>
+                  <p className="text-white font-medium">{deal.client_name || 'Unnamed Deal'}</p>
+                  <p className="text-xs text-slate-400">
+                    {stageLabels[deal.stage] || deal.stage}
+                    {deal.deal_value && ` • $${deal.deal_value.toLocaleString()}`}
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setEditingDeal(deal)}
+                    className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 hover:opacity-100"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setDeleteId(deal.id)}
+                    className="h-7 w-7 p-0 text-red-500 hover:text-red-700 opacity-0 group-hover:opacity-100 hover:opacity-100"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            ))}
           </div>
         ) : (
-          <Button 
-            onClick={() => setShowAddModal(true)}
-            className="w-full bg-gradient-to-r from-purple-600 to-cyan-500 hover:from-purple-500 hover:to-cyan-400 text-white"
-          >
-            + Add Deal
-          </Button>
+          <div className="text-center py-8 border border-white/10 rounded-xl bg-white/5 mb-6">
+            <Target className="w-12 h-12 text-slate-600 mx-auto mb-4" />
+            <p className="text-slate-400 mb-4">No deals in pipeline yet</p>
+          </div>
         )}
+
+        {/* Add button */}
+        <Button 
+          onClick={() => setShowAddModal(true)}
+          className="w-full bg-gradient-to-r from-purple-600 to-cyan-500 hover:from-purple-500 hover:to-cyan-400 text-white font-semibold"
+        >
+          + Add Deal
+        </Button>
       </AnalyticsCard>
 
       {showAddModal && (

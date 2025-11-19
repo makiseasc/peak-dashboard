@@ -50,7 +50,11 @@ async function fetchOutreach(days: number = 30): Promise<OutreachData> {
   return res.json();
 }
 
-export function OutreachWidget() {
+interface OutreachWidgetProps {
+  onUpdate?: () => void;
+}
+
+export function OutreachWidget({ onUpdate }: OutreachWidgetProps = {}) {
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingEntry, setEditingEntry] = useState<OutreachEntry | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -90,6 +94,7 @@ export function OutreachWidget() {
       queryClient.invalidateQueries({ queryKey: ["outreach"] });
       toast.success("Outreach entry added! 📧");
       setShowAddModal(false);
+      onUpdate?.();
     },
     onError: (error: Error) => {
       console.error("Outreach add error:", error);
@@ -125,6 +130,7 @@ export function OutreachWidget() {
       queryClient.invalidateQueries({ queryKey: ["outreach"] });
       toast.success("Outreach entry updated! ✏️");
       setEditingEntry(null);
+      onUpdate?.();
     },
     onError: (error: Error) => {
       console.error("Outreach update error:", error);
@@ -147,6 +153,7 @@ export function OutreachWidget() {
       queryClient.invalidateQueries({ queryKey: ["outreach"] });
       toast.success("Outreach entry deleted! 🗑️");
       setDeleteId(null);
+      onUpdate?.();
     },
     onError: (error: Error) => {
       toast.error(error.message || "Failed to delete outreach");

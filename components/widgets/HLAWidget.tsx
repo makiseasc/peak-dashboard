@@ -58,7 +58,11 @@ async function fetchHLA(date?: string): Promise<HLAData> {
   return res.json();
 }
 
-export function HLAWidget() {
+interface HLAWidgetProps {
+  onUpdate?: () => void;
+}
+
+export function HLAWidget({ onUpdate }: HLAWidgetProps = {}) {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showLevelUp, setShowLevelUp] = useState(false);
   const [newLevel, setNewLevel] = useState(0);
@@ -127,6 +131,7 @@ export function HLAWidget() {
       } else {
         queryClient.invalidateQueries({ queryKey: ["hla"] });
       }
+      onUpdate?.();
     },
     onError: (error: Error) => {
       toast.error(error.message || "Failed to update HLA");
@@ -158,6 +163,7 @@ export function HLAWidget() {
       queryClient.invalidateQueries({ queryKey: ["hla"] });
       toast.success("HLA added! 🎯");
       setShowAddModal(false);
+      onUpdate?.();
     },
     onError: (error: Error) => {
       console.error("HLA add error:", error);
@@ -239,6 +245,7 @@ export function HLAWidget() {
       queryClient.invalidateQueries({ queryKey: ["hla"] });
       toast.success("HLA deleted! 🗑️");
       setDeleteId(null);
+      onUpdate?.();
     },
     onError: (error: Error) => {
       toast.error(error.message || "Failed to delete HLA");
@@ -309,6 +316,7 @@ export function HLAWidget() {
                 text={hla.title}
                 completed={hla.completed}
                 onToggle={() => toggleMutation.mutate({ id: hla.id, completed: !hla.completed })}
+                onEdit={() => setEditingHLA(hla)}
               />
             ))
           ) : (
@@ -421,6 +429,7 @@ export function HLAWidget() {
               queryClient.invalidateQueries({ queryKey: ["hla"] });
               toast.success("HLA updated! ✏️");
               setEditingHLA(null);
+              onUpdate?.();
             } catch (error) {
               console.error("HLA update error:", error);
               toast.error("Failed to update HLA");

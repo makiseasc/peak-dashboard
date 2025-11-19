@@ -43,7 +43,11 @@ async function fetchRevenue(days: number = 30): Promise<RevenueData> {
   return res.json();
 }
 
-export function RevenueWidget() {
+interface RevenueWidgetProps {
+  onUpdate?: () => void;
+}
+
+export function RevenueWidget({ onUpdate }: RevenueWidgetProps = {}) {
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingEntry, setEditingEntry] = useState<RevenueEntry | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -84,6 +88,7 @@ export function RevenueWidget() {
       queryClient.invalidateQueries({ queryKey: ["revenue"] });
       toast.success("Revenue entry added! 💰");
       setShowAddModal(false);
+      onUpdate?.();
     },
     onError: (error: Error) => {
       console.error("Revenue add error:", error);
@@ -117,6 +122,7 @@ export function RevenueWidget() {
       queryClient.invalidateQueries({ queryKey: ["revenue"] });
       toast.success("Revenue entry updated! ✏️");
       setEditingEntry(null);
+      onUpdate?.();
     },
     onError: (error: Error) => {
       console.error("Revenue update error:", error);
@@ -139,6 +145,7 @@ export function RevenueWidget() {
       queryClient.invalidateQueries({ queryKey: ["revenue"] });
       toast.success("Revenue entry deleted! 🗑️");
       setDeleteId(null);
+      onUpdate?.();
     },
     onError: (error: Error) => {
       toast.error(error.message || "Failed to delete revenue");
@@ -238,29 +245,54 @@ export function RevenueWidget() {
           </div>
         )}
 
-        {/* Entries count or empty state */}
-        {revenue.revenue.length === 0 ? (
-          <div className="text-center py-8 border border-white/10 rounded-xl bg-white/5">
-            <DollarSign className="w-12 h-12 text-slate-600 mx-auto mb-4" />
-            <p className="text-slate-400 mb-4">No revenue entries yet</p>
-            <Button 
-              onClick={() => setShowAddModal(true)}
-              className="bg-gradient-to-r from-purple-600 to-cyan-500 hover:from-purple-500 hover:to-cyan-400 text-white"
-            >
-              + Add Entry
-            </Button>
+        {/* Recent entries list */}
+        {revenue.revenue.length > 0 ? (
+          <div className="space-y-2 mb-6">
+            <p className="text-sm text-slate-400 mb-3">Recent Entries</p>
+            {revenue.revenue.slice(0, 5).map(entry => (
+              <div 
+                key={entry.id}
+                className="flex items-center justify-between p-3 bg-white/5 border border-white/10 rounded-lg group hover:bg-white/10 transition-colors"
+              >
+                <div>
+                  <p className="text-white font-medium">${entry.amount.toLocaleString()}</p>
+                  <p className="text-xs text-slate-400">{entry.source} • {new Date(entry.date).toLocaleDateString()}</p>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setEditingEntry(entry)}
+                    className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 hover:opacity-100"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setDeleteId(entry.id)}
+                    className="h-7 w-7 p-0 text-red-500 hover:text-red-700 opacity-0 group-hover:opacity-100 hover:opacity-100"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            ))}
           </div>
         ) : (
-          <div className="flex justify-between items-center">
-            <p className="text-slate-300">{revenue.revenue.length} entries</p>
-            <Button 
-              onClick={() => setShowAddModal(true)}
-              className="bg-gradient-to-r from-purple-600 to-cyan-500 hover:from-purple-500 hover:to-cyan-400 text-white"
-            >
-              + Add Entry
-            </Button>
+          <div className="text-center py-8 border border-white/10 rounded-xl bg-white/5 mb-6">
+            <DollarSign className="w-12 h-12 text-slate-600 mx-auto mb-4" />
+            <p className="text-slate-400 mb-4">No revenue entries yet</p>
           </div>
         )}
+
+        {/* Add button */}
+        <Button 
+          onClick={() => setShowAddModal(true)}
+          className="w-full bg-gradient-to-r from-purple-600 to-cyan-500 hover:from-purple-500 hover:to-cyan-400 text-white font-semibold"
+        >
+          + Add Entry
+        </Button>
 
       </AnalyticsCard>
 
