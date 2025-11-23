@@ -19,6 +19,7 @@ import { RevenueWidget } from "@/components/widgets/RevenueWidget";
 import { PipelineWidget } from "@/components/widgets/PipelineWidget";
 import { HLAWidget } from "@/components/widgets/HLAWidget";
 import { OutreachWidget } from "@/components/widgets/OutreachWidget";
+import { getTodayCST, getDaysAgoCST } from "@/lib/date-utils";
 
 interface Metrics {
   xpToday: number;
@@ -56,15 +57,17 @@ export default function DashboardPage() {
   const fetchAllData = useCallback(async () => {
     try {
       setIsLoading(true);
-      const today = new Date().toISOString().split('T')[0];
+      const today = getTodayCST();
       
       // Fetch HLAs for today
       const hlaRes = await fetch(`/api/hla?date=${today}`);
       const hlaData = await hlaRes.json();
       const todayHLAs = hlaData.today || [];
       
-      // Calculate XP today
-      const xpToday = todayHLAs.reduce((sum: number, hla: any) => sum + (hla.xp || 0), 0);
+      // Calculate XP today (only from completed HLAs)
+      const xpToday = todayHLAs
+        .filter((hla: any) => hla.completed)
+        .reduce((sum: number, hla: any) => sum + (hla.xp || 10), 0);
 
       // Fetch revenue (last 30 days)
       const revRes = await fetch('/api/revenue?days=30');
@@ -116,13 +119,15 @@ export default function DashboardPage() {
       // Fetch XP data (last 7 days)
       const xpHistory: Array<{ date: string; xp: number }> = [];
       for (let i = 6; i >= 0; i--) {
-        const date = new Date();
-        date.setDate(date.getDate() - i);
-        const dateStr = date.toISOString().split('T')[0];
+        const dateStr = getDaysAgoCST(i);
         const dayRes = await fetch(`/api/hla?date=${dateStr}`);
         const dayData = await dayRes.json();
         const dayHLAs = dayData.today || [];
-        const dayXP = dayHLAs.reduce((sum: number, hla: any) => sum + (hla.xp || 0), 0);
+        // Only count XP from completed HLAs
+        const dayXP = dayHLAs
+          .filter((hla: any) => hla.completed)
+          .reduce((sum: number, hla: any) => sum + (hla.xp || 10), 0);
+        const date = new Date(dateStr + 'T12:00:00');
         xpHistory.push({
           date: date.toLocaleDateString('en-US', { weekday: 'short' }),
           xp: dayXP,
@@ -192,9 +197,7 @@ export default function DashboardPage() {
       // Generate HLA heatmap (last 28 days)
       const heatmapData = [];
       for (let i = 27; i >= 0; i--) {
-        const date = new Date();
-        date.setDate(date.getDate() - i);
-        const dateStr = date.toISOString().split('T')[0];
+        const dateStr = getDaysAgoCST(i);
         const dayRes = await fetch(`/api/hla?date=${dateStr}`);
         const dayData = await dayRes.json();
         const dayHLAs = dayData.today || [];

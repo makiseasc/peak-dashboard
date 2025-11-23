@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { getTodayCST } from '@/lib/date-utils';
 
 // GET - Fetch HLA data
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const date = searchParams.get('date') || new Date().toISOString().split('T')[0];
+    const date = searchParams.get('date') || getTodayCST();
     const days = parseInt(searchParams.get('days') || '7');
 
     if (!isSupabaseConfigured()) {
@@ -26,8 +27,18 @@ export async function GET(request: NextRequest) {
 
     if (todayError) throw todayError;
 
+    const completed = todayData.filter(h => h.completed).length;
+    const total = todayData.length;
+
+    // Calculate total XP from completed HLAs for the selected date
+    const totalXP = todayData
+      .filter(h => h.completed)
+      .reduce((sum, h) => sum + (h.xp || 10), 0);
+
     // Get recent HLAs for streak calculation
-    const startDate = new Date();
+    const today = getTodayCST();
+    const todayDate = new Date(today + 'T12:00:00');
+    const startDate = new Date(todayDate);
     startDate.setDate(startDate.getDate() - days);
     
     const { data: recentData, error: recentError } = await supabase!
@@ -38,21 +49,12 @@ export async function GET(request: NextRequest) {
 
     if (recentError) throw recentError;
 
-    const completed = todayData.filter(h => h.completed).length;
-    const total = todayData.length;
-
-    // Calculate total XP from completed HLAs today
-    const totalXP = todayData
-      .filter(h => h.completed)
-      .reduce((sum, h) => sum + (h.xp || 10), 0);
-
     // Calculate current streak (consecutive days with all HLAs completed)
     let streakCount = 0;
-    const today = new Date().toISOString().split('T')[0];
     
     // Check backwards from today for consecutive completed days
     for (let i = 0; i < 365; i++) {
-      const checkDate = new Date();
+      const checkDate = new Date(today + 'T12:00:00');
       checkDate.setDate(checkDate.getDate() - i);
       const dateStr = checkDate.toISOString().split('T')[0];
       

@@ -28,6 +28,8 @@ import { AnimatedNumber } from "@/components/ui/AnimatedNumber";
 import { Skeleton } from "@/components/ui/skeleton";
 import confetti from "canvas-confetti";
 import { motion, AnimatePresence } from "framer-motion";
+import { getTodayCST, isTodayCST, isPastDate, isFutureDate } from "@/lib/date-utils";
+import { Calendar } from "lucide-react";
 
 interface HLA {
   id: string;
@@ -73,13 +75,14 @@ export function HLAWidget({ onUpdate }: HLAWidgetProps = {}) {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [showMilestone, setShowMilestone] = useState(false);
   const [milestoneStreak, setMilestoneStreak] = useState(0);
+  const [selectedDate, setSelectedDate] = useState<string>(getTodayCST());
   const { awardXP, awardGP, updateStreak, data: contextData } = useDashboard();
   const queryClient = useQueryClient();
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = getTodayCST();
   const { data, isLoading, error } = useQuery<HLAData>({
-    queryKey: ["hla", today],
-    queryFn: () => fetchHLA(today),
+    queryKey: ["hla", selectedDate],
+    queryFn: () => fetchHLA(selectedDate),
     refetchInterval: 30000,
   });
 
@@ -101,7 +104,7 @@ export function HLAWidget({ onUpdate }: HLAWidgetProps = {}) {
         
         // Invalidate and fetch updated data to check streak
         await queryClient.invalidateQueries({ queryKey: ["hla"] });
-        const updatedData = await queryClient.fetchQuery({ queryKey: ["hla", today] });
+        const updatedData = await queryClient.fetchQuery({ queryKey: ["hla", selectedDate] });
         const currentStreak = (updatedData as HLAData)?.streakCount || 0;
         
         // Trigger confetti on streak milestones
@@ -285,6 +288,39 @@ export function HLAWidget({ onUpdate }: HLAWidgetProps = {}) {
         title="Daily High-Leverage Activities"
         subtitle={`${completedCount}/${totalCount} Complete`}
       >
+        {/* Date Selector */}
+        <div className="mb-6">
+          <div className="flex items-center gap-3">
+            <Calendar className="w-4 h-4 text-slate-400" />
+            <Input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              className="max-w-[200px] bg-white/5 border-white/10"
+            />
+            {!isTodayCST(selectedDate) && (
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => setSelectedDate(today)}
+                className="text-xs"
+              >
+                Today
+              </Button>
+            )}
+            {isPastDate(selectedDate) && (
+              <Badge variant="outline" className="text-xs text-yellow-400 border-yellow-500/30">
+                Past Date
+              </Badge>
+            )}
+            {isFutureDate(selectedDate) && (
+              <Badge variant="outline" className="text-xs text-cyan-400 border-cyan-500/30">
+                Future Date
+              </Badge>
+            )}
+          </div>
+        </div>
+
         {/* XP & Streak metrics */}
         <div className="grid grid-cols-2 gap-4 mb-6">
           <div className="bg-white/5 border border-white/10 rounded-xl p-4">
@@ -295,6 +331,9 @@ export function HLAWidget({ onUpdate }: HLAWidgetProps = {}) {
             <p className="text-3xl font-bold font-mono text-white">
               <AnimatedNumber value={totalXP} />
             </p>
+            <p className="text-xs text-slate-500 mt-1">
+              {isTodayCST(selectedDate) ? "Today" : isPastDate(selectedDate) ? "For this date" : "Planned"}
+            </p>
           </div>
           <div className="bg-white/5 border border-white/10 rounded-xl p-4">
             <div className="flex items-center justify-between mb-2">
@@ -304,6 +343,7 @@ export function HLAWidget({ onUpdate }: HLAWidgetProps = {}) {
             <p className="text-3xl font-bold font-mono text-white">
               <AnimatedNumber value={streakCount} /> days
             </p>
+            <p className="text-xs text-slate-500 mt-1">Current streak</p>
           </div>
         </div>
 
@@ -322,7 +362,13 @@ export function HLAWidget({ onUpdate }: HLAWidgetProps = {}) {
           ) : (
             <div className="text-center py-8 border border-white/10 rounded-xl bg-white/5">
               <Target className="w-12 h-12 text-slate-600 mx-auto mb-4" />
-              <p className="text-slate-400 mb-4">No HLAs for today yet</p>
+              <p className="text-slate-400 mb-4">
+                {isTodayCST(selectedDate) 
+                  ? "No HLAs for today yet" 
+                  : isPastDate(selectedDate)
+                  ? `No HLAs for ${new Date(selectedDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
+                  : `No HLAs planned for ${new Date(selectedDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}
+              </p>
               <Button
                 onClick={() => setShowAddModal(true)}
                 className="bg-gradient-to-r from-purple-600 to-cyan-500 hover:from-purple-500 hover:to-cyan-400 text-white"
@@ -339,7 +385,11 @@ export function HLAWidget({ onUpdate }: HLAWidgetProps = {}) {
             <div className="flex items-center justify-center gap-2">
               <Check className="w-5 h-5 text-green-400" />
               <p className="text-green-400 font-medium">
-                All HLAs completed for today! Outstanding work.
+                {isTodayCST(selectedDate) 
+                  ? "All HLAs completed for today! Outstanding work."
+                  : isPastDate(selectedDate)
+                  ? `All HLAs completed for ${new Date(selectedDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}!`
+                  : `All HLAs planned for ${new Date(selectedDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}!`}
               </p>
             </div>
           </div>
@@ -360,6 +410,7 @@ export function HLAWidget({ onUpdate }: HLAWidgetProps = {}) {
         <QuickAddModal
           type="hla"
           onClose={() => setShowAddModal(false)}
+          initialData={{ date: selectedDate }}
           onSubmit={(data) => {
             // Validate title before submitting
             const title = (data.title || "").trim();
@@ -369,7 +420,7 @@ export function HLAWidget({ onUpdate }: HLAWidgetProps = {}) {
             }
             
             addMutation.mutate({
-              date: data.date || today,
+              date: data.date || selectedDate,
               title: title,
               description: data.description?.trim() || undefined,
               energy_level: data.energy_level && data.energy_level.trim()
