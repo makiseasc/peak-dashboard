@@ -357,6 +357,7 @@ export function HLAWidget({ onUpdate }: HLAWidgetProps = {}) {
                 completed={hla.completed}
                 onToggle={() => toggleMutation.mutate({ id: hla.id, completed: !hla.completed })}
                 onEdit={() => setEditingHLA(hla)}
+                onDelete={() => setDeleteId(hla.id)}
               />
             ))
           ) : (

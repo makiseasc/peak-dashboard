@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Edit2 } from "lucide-react";
+import { Check, Edit2, Trash2 } from "lucide-react";
 import { Button } from "./button";
 
 interface CheckItemProps {
@@ -8,9 +8,10 @@ interface CheckItemProps {
   completed: boolean;
   onToggle: () => void;
   onEdit?: () => void;
+  onDelete?: () => void;
 }
 
-export function CheckItem({ text, completed, onToggle, onEdit }: CheckItemProps) {
+export function CheckItem({ text, completed, onToggle, onEdit, onDelete }: CheckItemProps) {
   return (
     <div
       className="
@@ -39,19 +40,34 @@ export function CheckItem({ text, completed, onToggle, onEdit }: CheckItemProps)
       >
         {text}
       </span>
-      {onEdit && (
-        <Button
-          size="sm"
-          variant="ghost"
-          onClick={(e) => {
-            e.stopPropagation();
-            onEdit();
-          }}
-          className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 hover:opacity-100"
-        >
-          <Edit2 className="w-3 h-3" />
-        </Button>
-      )}
+      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100">
+        {onEdit && (
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={(e) => {
+              e.stopPropagation();
+              onEdit();
+            }}
+            className="h-7 w-7 p-0 text-slate-400 hover:text-purple-400"
+          >
+            <Edit2 className="w-3 h-3" />
+          </Button>
+        )}
+        {onDelete && (
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete();
+            }}
+            className="h-7 w-7 p-0 text-slate-400 hover:text-red-400"
+          >
+            <Trash2 className="w-3 h-3" />
+          </Button>
+        )}
+      </div>
     </div>
   );
 }
